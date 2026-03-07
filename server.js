@@ -84,12 +84,22 @@ function getClientIp(req) {
   return remote;
 }
 
-function serveFile(res, pathname) {
-  const safePath = pathname === '/' ? '/index.html' : pathname;
-  const normalized = path.normalize(safePath).replace(/^([.][.][/\\])+/, '');
-  const filePath = path.join(root, normalized);
+function resolveFilePath(pathname) {
+  const requestPath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  const normalized = path.normalize(requestPath);
+  const filePath = path.resolve(root, normalized);
 
-  if (!filePath.startsWith(root) || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
+  if (!filePath.startsWith(root + path.sep) && filePath !== root) {
+    return null;
+  }
+
+  return filePath;
+}
+
+function serveFile(req, res, pathname) {
+  const filePath = resolveFilePath(pathname);
+
+  if (!filePath || !fs.existsSync(filePath) || !fs.statSync(filePath).isFile()) {
     sendText(res, 404, 'Not Found');
     return;
   }
@@ -99,6 +109,12 @@ function serveFile(res, pathname) {
     'Content-Type': getContentType(filePath),
     'Content-Length': body.length
   });
+
+  if (req.method === 'HEAD') {
+    res.end();
+    return;
+  }
+
   res.end(body);
 }
 
@@ -152,7 +168,7 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
-  serveFile(res, pathname);
+  serveFile(req, res, pathname);
 });
 
 server.listen(port, () => {
