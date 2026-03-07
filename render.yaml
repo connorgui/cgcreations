@@ -1,0 +1,7 @@
+services:
+  - type: web
+    name: school-tools
+    runtime: node
+    plan: free
+    buildCommand: ""
+    startCommand: node server.js

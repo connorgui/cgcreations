@@ -1,0 +1,45 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Creations</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app home-app">
+    <section class="home-shell">
+      <div class="home-header">
+        <p class="eyebrow">Creations</p>
+        <h1>What Can You Explore Here?</h1>
+        <p class="home-subtitle">A growing set of tools, experiments, and more.</p>
+        <div class="home-meta">
+          <span class="meta-pill">Tools</span>
+          <span class="meta-pill">Visitors: <strong id="unique-users">0</strong></span>
+        </div>
+      </div>
+
+      <section class="creations-grid" aria-label="Creations tools">
+        <article class="creation-card creation-card-active">
+          <div class="creation-icon pi-icon">&pi;</div>
+          <h2>Pi Voice Checker</h2>
+          <p>Speak digits of Pi, track your streak, and see the exact prefix you have recited correctly.</p>
+          <a class="creation-link" href="pi-checker.html">Open</a>
+        </article>
+
+        <article class="creation-card creation-card-muted">
+          <div class="creation-icon soon-icon">+</div>
+          <h2>More Tools</h2>
+          <p>More creations can be added here as the collection grows.</p>
+          <span class="creation-link creation-link-disabled">Coming Soon</span>
+        </article>
+      </section>
+    </section>
+  </main>
+
+  <script src="analytics.js"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>

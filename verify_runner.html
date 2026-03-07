@@ -1,0 +1,46 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Verification Runner</title>
+</head>
+<body>
+  <div id="correct-count"></div>
+  <div id="wrong-count"></div>
+  <div id="next-position"></div>
+  <div id="signal-light" class="signal-idle"></div>
+  <div id="status-text"></div>
+  <div id="spoken-digit"></div>
+  <div id="correct-sequence"></div>
+  <button id="start-button" type="button">start</button>
+  <button id="stop-button" type="button">stop</button>
+  <button id="reset-button" type="button">reset</button>
+  <div id="support-text"></div>
+  <input id="manual-digit" type="text">
+  <button id="manual-submit" type="button">submit</button>
+  <script src="app.js"></script>
+  <pre id="result">RUNNING</pre>
+  <script>
+    const api = window.piVoiceAppTestApi;
+    const output = document.getElementById('result');
+    if (!api) {
+      output.textContent = 'FAIL: API missing';
+    } else {
+      api.resetProgress();
+      const ignored = api.submitTranscript('hello there', { ignoreUnrecognized: true });
+      const zero = api.extractDigits('o').join('');
+      const first = api.submitTranscript('3 1 4 1 5');
+      const bad = api.submitTranscript('8 5');
+      const state = api.getState();
+      const pass = ignored.ignored === true
+        && zero === '0'
+        && first.ok
+        && !bad.ok
+        && state.correctCount === 5
+        && state.wrongCount === 1
+        && state.correctSequence === '3.1415';
+      output.textContent = pass ? 'PASS' : 'FAIL: ' + JSON.stringify({ ignored, zero, first, bad, state });
+    }
+  </script>
+</body>
+</html>

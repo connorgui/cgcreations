@@ -1,0 +1,98 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Pi Voice Challenge</title>
+  <link rel="stylesheet" href="styles.css">
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <a class="back-link" href="index.html">Back to Creations</a>
+      <p class="eyebrow">Voice Memory Drill</p>
+      <h1>Recite Pi in Short Runs</h1>
+      <p class="intro">
+        Speak one digit or several digits in order. The app checks them against Pi,
+        advances through every correct digit it hears, and stops at the first mismatch.
+      </p>
+
+      <div class="stats">
+        <article class="stat-card">
+          <span class="stat-label">Digits Correct</span>
+          <strong id="correct-count">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Wrong Attempts</span>
+          <strong id="wrong-count">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Next Expected Position</span>
+          <strong id="next-position">1</strong>
+        </article>
+      </div>
+
+      <div class="status-wrap">
+        <div id="signal-light" class="signal signal-idle" aria-live="polite"></div>
+        <div class="status-copy">
+          <p class="status-label">Last Result</p>
+          <p id="status-text" class="status-text">Press start to begin listening.</p>
+        </div>
+      </div>
+
+      <div class="spoken-wrap">
+        <span class="spoken-label">Last Digits Heard</span>
+        <strong id="spoken-digit" class="spoken-digit">-</strong>
+      </div>
+
+      <div class="spoken-wrap">
+        <span class="spoken-label">Correct Pi So Far</span>
+        <p id="correct-sequence" class="sequence-display">-</p>
+      </div>
+
+      <div class="actions">
+        <button id="start-button" type="button">Start Listening</button>
+        <button id="stop-button" type="button" class="secondary">Stop</button>
+        <button id="reset-button" type="button" class="secondary">Reset Score</button>
+      </div>
+
+      <section class="test-panel" aria-label="Manual verification tools">
+        <div class="test-copy">
+          <h2>Manual Test</h2>
+          <p>
+            Type one digit or several digits like 31415 to verify the matching logic without microphone input.
+          </p>
+        </div>
+        <div class="test-controls">
+          <input id="manual-digit" type="text" inputmode="numeric" placeholder="31415 or one four one">
+          <button id="manual-submit" type="button" class="secondary">Submit</button>
+        </div>
+      </section>
+
+      <section class="info">
+        <h2>Target Sequence</h2>
+        <p class="pi-display" id="pi-display">3.14159265358979323846264338327950288419716939937510582097494459230781640628620899862803482534211706798214808651328230664709384460955058223172535940812848111745028410270193852110555964462294895493038196</p>
+        <p id="support-text" class="support-text">
+          This uses the first 200 decimal digits of Pi and works best in Chrome or Edge on desktop with microphone access enabled.
+        </p>
+      </section>
+
+      <section class="info analytics-panel">
+        <h2>Visitors</h2>
+        <div class="analytics-grid">
+          <article class="stat-card">
+            <span class="stat-label">Visitors</span>
+            <strong id="unique-users">0</strong>
+          </article>
+        </div>
+      </section>
+    </section>
+  </main>
+
+  <script src="app.js"></script>
+  <script src="analytics.js"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>

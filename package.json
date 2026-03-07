@@ -1,0 +1,12 @@
+{
+  "name": "school-tools",
+  "version": "1.0.0",
+  "private": true,
+  "description": "Creations site with the Pi Voice Checker tool.",
+  "scripts": {
+    "start": "node server.js"
+  },
+  "engines": {
+    "node": ">=18"
+  }
+}

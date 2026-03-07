@@ -1,0 +1,27 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <title>Analytics Verify</title>
+</head>
+<body>
+  <iframe id="home" src="http://localhost:8099/" style="width:0;height:0;border:0"></iframe>
+  <pre id="result">RUNNING</pre>
+  <script>
+    window.addEventListener('load', () => {
+      const frame = document.getElementById('home');
+      frame.addEventListener('load', () => {
+        setTimeout(() => {
+          const doc = frame.contentDocument;
+          const totalVisits = doc.getElementById('total-visits')?.textContent?.trim();
+          const recentText = doc.getElementById('recent-visits')?.textContent?.trim() || '';
+          const pass = Number(totalVisits) >= 1 && recentText.includes('Creations');
+          document.getElementById('result').textContent = pass
+            ? 'PASS'
+            : `FAIL: total=${totalVisits}; recent=${recentText}`;
+        }, 1000);
+      }, { once: true });
+    });
+  </script>
+</body>
+</html>
