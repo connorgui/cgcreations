@@ -27,20 +27,29 @@ const signalLightEl = document.getElementById("signal-light");
 const statusTextEl = document.getElementById("status-text");
 const spokenDigitEl = document.getElementById("spoken-digit");
 const correctSequenceEl = document.getElementById("correct-sequence");
-const startButtonEl = document.getElementById("start-button");
-const stopButtonEl = document.getElementById("stop-button");
+const listenButtonEl = document.getElementById("listen-button");
 const resetButtonEl = document.getElementById("reset-button");
 const supportTextEl = document.getElementById("support-text");
 const manualDigitEl = document.getElementById("manual-digit");
 const manualSubmitEl = document.getElementById("manual-submit");
 
 const SpeechRecognition = window.SpeechRecognition || window.webkitSpeechRecognition;
+const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || "");
 
 let recognition = null;
 let listening = false;
 let shouldResume = false;
 let correctCount = 0;
 let wrongCount = 0;
+
+function updateListenButton() {
+  if (listening) {
+    listenButtonEl.textContent = isMobile ? "Stop Speaking" : "Stop Listening";
+    return;
+  }
+
+  listenButtonEl.textContent = isMobile ? "Tap to Speak" : "Start Listening";
+}
 
 function setSignal(state) {
   signalLightEl.classList.remove("signal-idle", "signal-success", "signal-error");
@@ -182,7 +191,9 @@ function submitTranscript(transcript, options = {}) {
   if (!digits.length) {
     if (ignoreUnrecognized) {
       setSignal("idle");
-      setStatus("Listening for digits. Say numbers like 3 1 4 or 314.");
+      setStatus(isMobile
+        ? "Tap to Speak again and say digits like 3 1 4 or 314."
+        : "Listening for digits. Say numbers like 3 1 4 or 314.");
       return {
         ok: false,
         ignored: true,
@@ -209,7 +220,7 @@ function startListening() {
     return;
   }
 
-  shouldResume = true;
+  shouldResume = !isMobile;
   try {
     recognition.start();
   } catch (error) {
@@ -229,10 +240,20 @@ function stopListening() {
   }
 }
 
+function toggleListening() {
+  if (listening) {
+    stopListening();
+    setSignal("idle");
+    setStatus("Listening stopped.");
+    return;
+  }
+
+  startListening();
+}
+
 function initRecognition() {
   if (!SpeechRecognition) {
-    startButtonEl.disabled = true;
-    stopButtonEl.disabled = true;
+    listenButtonEl.disabled = true;
     supportTextEl.textContent =
       "Speech recognition is not available in this browser. Use a recent Chrome or Edge build.";
     setStatus("Speech recognition unsupported in this browser. Use the manual test controls below.");
@@ -241,18 +262,27 @@ function initRecognition() {
 
   recognition = new SpeechRecognition();
   recognition.lang = "en-US";
-  recognition.continuous = true;
+  recognition.continuous = !isMobile;
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
 
+  if (isMobile) {
+    supportTextEl.textContent =
+      "On phones, tap Tap to Speak for each phrase. Mobile browsers usually stop speech recognition after one result.";
+  }
+
   recognition.onstart = () => {
     listening = true;
+    updateListenButton();
     setSignal("idle");
-    setStatus("Listening for your next digit or group of digits.");
+    setStatus(isMobile
+      ? "Listening for one spoken phrase of digits."
+      : "Listening for your next digit or group of digits.");
   };
 
   recognition.onend = () => {
     listening = false;
+    updateListenButton();
 
     if (shouldResume) {
       window.setTimeout(() => {
@@ -260,6 +290,12 @@ function initRecognition() {
           startListening();
         }
       }, 75);
+      return;
+    }
+
+    if (isMobile) {
+      setStatus("Tap to Speak again for the next phrase.");
+      setSignal("idle");
     }
   };
 
@@ -272,7 +308,9 @@ function initRecognition() {
     }
 
     if (event.error === "no-speech" || event.error === "aborted") {
-      setStatus("No digits detected yet. Waiting for another attempt.");
+      setStatus(isMobile
+        ? "No digits detected. Tap to Speak and try again."
+        : "No digits detected yet. Waiting for another attempt.");
       setSignal("idle");
       return;
     }
@@ -301,12 +339,7 @@ function submitManualDigits() {
   submitTranscript(value);
 }
 
-startButtonEl.addEventListener("click", startListening);
-stopButtonEl.addEventListener("click", () => {
-  stopListening();
-  setSignal("idle");
-  setStatus("Listening stopped.");
-});
+listenButtonEl.addEventListener("click", toggleListening);
 resetButtonEl.addEventListener("click", resetProgress);
 manualSubmitEl.addEventListener("click", submitManualDigits);
 manualDigitEl.addEventListener("keydown", (event) => {
@@ -316,6 +349,7 @@ manualDigitEl.addEventListener("keydown", (event) => {
 });
 
 updateScoreboard();
+updateListenButton();
 initRecognition();
 
 window.piVoiceAppTestApi = {
@@ -329,6 +363,8 @@ window.piVoiceAppTestApi = {
     lastSpokenDigit: spokenDigitEl.textContent,
     correctSequence: correctSequenceEl.textContent,
     status: statusTextEl.textContent,
-    totalPiDigits: PI_DIGITS.length
+    totalPiDigits: PI_DIGITS.length,
+    listening,
+    isMobile
   })
 };

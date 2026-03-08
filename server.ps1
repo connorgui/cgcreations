@@ -5,20 +5,6 @@ $analyticsPath = Join-Path $root 'analytics.json'
 $listener = [System.Net.HttpListener]::new()
 $listener.Prefixes.Add("http://localhost:$Port/")
 
-function Normalize-AnalyticsData {
-  param([Parameter(Mandatory = $true)]$analytics)
-
-  $knownIps = @()
-  if ($analytics.PSObject.Properties['knownIps']) {
-    $knownIps = @($analytics.knownIps)
-  }
-
-  return [pscustomobject]@{
-    uniqueUsers = $knownIps.Count
-    knownIps = $knownIps
-  }
-}
-
 function Get-AnalyticsData {
   if (-not (Test-Path $analyticsPath -PathType Leaf)) {
     $initial = [pscustomobject]@{
@@ -30,22 +16,26 @@ function Get-AnalyticsData {
   }
 
   $raw = Get-Content $analyticsPath -Raw | ConvertFrom-Json
-  $normalized = Normalize-AnalyticsData -analytics $raw
+  $knownIps = if ($raw.PSObject.Properties['knownIps']) { @($raw.knownIps) } else { @() }
+  $normalized = [pscustomobject]@{
+    uniqueUsers = $knownIps.Count
+    knownIps = $knownIps
+  }
+
   if (($raw.PSObject.Properties['knownIps'] -eq $null) -or ([int]$raw.uniqueUsers -ne $normalized.uniqueUsers)) {
     Save-AnalyticsData -analytics $normalized
   }
+
   return $normalized
 }
 
 function Save-AnalyticsData {
   param([Parameter(Mandatory = $true)]$analytics)
-
   $analytics | ConvertTo-Json -Depth 6 | Set-Content -NoNewline $analyticsPath
 }
 
 function Get-RequestBody {
   param($request)
-
   $reader = New-Object System.IO.StreamReader($request.InputStream, $request.ContentEncoding)
   try {
     return $reader.ReadToEnd()
@@ -93,7 +83,6 @@ try {
     if ($request.HttpMethod -eq 'POST' -and $path -eq 'api/visit') {
       $null = Get-RequestBody -request $request
       $ipAddress = $request.RemoteEndPoint.Address.ToString()
-
       $analytics = Get-AnalyticsData
       $knownIps = @($analytics.knownIps)
       if ($knownIps -notcontains $ipAddress) {
@@ -101,7 +90,6 @@ try {
         $analytics.uniqueUsers = @($analytics.knownIps).Count
         Save-AnalyticsData -analytics $analytics
       }
-
       Send-JsonResponse -context $context -statusCode 200 -data ([pscustomobject]@{ uniqueUsers = [int]$analytics.uniqueUsers })
       continue
     }

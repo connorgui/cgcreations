@@ -3,5 +3,5 @@ services:
     name: school-tools
     runtime: node
     plan: free
-    buildCommand: ""
+    buildCommand: npm install
     startCommand: node server.js

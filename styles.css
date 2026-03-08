@@ -89,26 +89,6 @@ h3 {
   color: var(--muted);
 }
 
-.home-meta {
-  display: flex;
-  justify-content: center;
-  flex-wrap: wrap;
-  gap: 10px;
-  margin-top: 18px;
-}
-
-.meta-pill {
-  display: inline-flex;
-  align-items: center;
-  gap: 6px;
-  padding: 10px 16px;
-  border-radius: 999px;
-  background: rgba(255, 248, 240, 0.88);
-  border: 1px solid rgba(184, 92, 56, 0.2);
-  color: var(--accent-dark);
-  font-size: 0.95rem;
-}
-
 .stats {
   margin-top: 28px;
 }
@@ -130,7 +110,8 @@ h3 {
 .stat-card,
 .spoken-wrap,
 .info,
-.test-panel {
+.test-panel,
+.contact-panel {
   padding: 18px 20px;
   border-radius: 26px;
   background: rgba(255, 255, 255, 0.84);
@@ -182,7 +163,8 @@ h3 {
 .support-text,
 .sequence-display,
 .pi-display,
-.test-panel p {
+.test-panel p,
+.contact-panel p {
   margin: 12px 0 0;
   color: var(--muted);
 }
@@ -202,9 +184,14 @@ h3 {
   font-weight: 700;
 }
 
-.creation-link:hover,
-.back-link:hover {
+.creation-link:hover {
   background: var(--accent-dark);
+}
+
+.back-link:hover {
+  background: transparent;
+  color: var(--accent-dark);
+  text-decoration: underline;
 }
 
 .creation-link-disabled {
@@ -284,7 +271,8 @@ h3 {
 
 .spoken-wrap,
 .test-panel,
-.info {
+.info,
+.contact-panel {
   margin-top: 18px;
 }
 
@@ -296,8 +284,38 @@ h3 {
   margin-top: 24px;
 }
 
+.section-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 12px;
+  align-items: baseline;
+  margin-bottom: 16px;
+}
+
+.section-head-stack {
+  display: block;
+}
+
+.contact-form {
+  display: grid;
+  gap: 16px;
+  margin-top: 20px;
+}
+
+.form-field {
+  display: grid;
+  gap: 8px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.hidden-field {
+  display: none;
+}
+
 button,
-input {
+input,
+textarea {
   font: inherit;
   font-size: 1rem;
 }
@@ -328,12 +346,18 @@ button:disabled {
   transform: none;
 }
 
-input {
-  width: 240px;
+input,
+textarea {
+  width: 100%;
   border: 1px solid rgba(31, 41, 51, 0.18);
-  border-radius: 999px;
+  border-radius: 20px;
   padding: 14px 18px;
   background: rgba(255, 255, 255, 0.9);
+}
+
+textarea {
+  resize: vertical;
+  min-height: 120px;
 }
 
 .sequence-display,

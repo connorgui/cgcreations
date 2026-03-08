@@ -7,6 +7,11 @@ const root = __dirname;
 const analyticsPath = path.join(root, 'analytics.json');
 const port = Number(process.env.PORT || 8080);
 
+function normalizeAnalyticsData(raw) {
+  const knownIps = Array.isArray(raw && raw.knownIps) ? raw.knownIps : [];
+  return { uniqueUsers: knownIps.length, knownIps };
+}
+
 function readAnalytics() {
   if (!fs.existsSync(analyticsPath)) {
     const initial = { uniqueUsers: 0, knownIps: [] };
@@ -16,8 +21,7 @@ function readAnalytics() {
 
   try {
     const raw = JSON.parse(fs.readFileSync(analyticsPath, 'utf8'));
-    const knownIps = Array.isArray(raw.knownIps) ? raw.knownIps : [];
-    const normalized = { uniqueUsers: knownIps.length, knownIps };
+    const normalized = normalizeAnalyticsData(raw);
     if (raw.uniqueUsers !== normalized.uniqueUsers || !Array.isArray(raw.knownIps)) {
       writeAnalytics(normalized);
     }

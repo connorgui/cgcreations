@@ -9,14 +9,16 @@ This project can be deployed as a Node web service.
 3. Render should detect `render.yaml` automatically.
 4. If prompted manually:
    - Runtime: Node
-   - Build command: leave empty
+   - Build command: `npm install`
    - Start command: `node server.js`
 5. After deploy, open the generated public URL.
 
-## Important note about visitor counts
+## Visitor count
 
 The visitor count is based on unique IP addresses seen by the server.
 Behind a proxy/CDN, `server.js` reads `x-forwarded-for` and `x-real-ip` first.
+
+## Important note
 
 If your host uses ephemeral disk storage, `analytics.json` may reset on redeploy or restart.
 For durable counts, move analytics storage to a database or persistent disk.
