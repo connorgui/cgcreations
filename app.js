@@ -41,6 +41,7 @@ let listening = false;
 let shouldResume = false;
 let correctCount = 0;
 let wrongCount = 0;
+let heardFinalResultThisSession = false;
 
 function updateListenButton() {
   if (listening) {
@@ -273,6 +274,7 @@ function initRecognition() {
 
   recognition.onstart = () => {
     listening = true;
+    heardFinalResultThisSession = false;
     updateListenButton();
     setSignal("idle");
     setStatus(isMobile
@@ -293,7 +295,7 @@ function initRecognition() {
       return;
     }
 
-    if (isMobile) {
+    if (isMobile && !heardFinalResultThisSession) {
       setStatus("Tap to Speak again for the next phrase.");
       setSignal("idle");
     }
@@ -327,6 +329,7 @@ function initRecognition() {
       }
 
       const transcript = result[0]?.transcript ?? "";
+      heardFinalResultThisSession = true;
       submitTranscript(transcript, { ignoreUnrecognized: true });
     }
   };

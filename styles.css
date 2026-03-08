@@ -52,7 +52,7 @@ body {
 
 .home-header {
   text-align: center;
-  margin-bottom: 36px;
+  margin-bottom: 28px;
 }
 
 .eyebrow {
@@ -87,6 +87,29 @@ h3 {
   max-width: 48ch;
   font-size: 1.05rem;
   color: var(--muted);
+}
+
+.home-stat-row {
+  display: flex;
+  justify-content: center;
+  margin-bottom: 18px;
+}
+
+.home-stat-pill {
+  display: inline-flex;
+  align-items: center;
+  gap: 8px;
+  padding: 7px 12px;
+  border-radius: 999px;
+  background: rgba(221, 208, 192, 0.95);
+  color: #6f6257;
+}
+
+.home-stat-text {
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.12em;
+  text-transform: uppercase;
 }
 
 .stats {
@@ -214,6 +237,14 @@ h3 {
   display: block;
   margin-top: 8px;
   font-size: 2rem;
+}
+
+.home-stat-pill strong {
+  display: inline-block;
+  margin-top: 0;
+  font-size: 1.05rem;
+  font-weight: 700;
+  color: var(--accent-dark);
 }
 
 .back-link {
@@ -385,3 +416,5 @@ textarea {
     width: 100%;
   }
 }
+
+
