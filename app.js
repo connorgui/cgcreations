@@ -43,6 +43,10 @@ let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
 
+function withMobileContinue(message) {
+  return isMobile ? `${message} Tap to continue.` : message;
+}
+
 function updateListenButton() {
   if (listening) {
     listenButtonEl.textContent = isMobile ? "Stop Speaking" : "Stop Listening";
@@ -152,7 +156,7 @@ function applyDigits(digits) {
   if (incorrectDigit) {
     incrementWrongCount();
     setSignal("error");
-    setStatus(`Incorrect at ${incorrectDigit}. Expected ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`);
+    setStatus(withMobileContinue(`Incorrect at ${incorrectDigit}. Expected ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`));
     return {
       ok: false,
       consumedDigits,
@@ -166,7 +170,7 @@ function applyDigits(digits) {
   if (correctCount === PI_DIGITS.length) {
     shouldResume = false;
     setSignal("success");
-    setStatus("Complete. You matched all available Pi digits in this demo.");
+    setStatus(withMobileContinue("Complete. You matched all available Pi digits in this demo."));
     if (recognition && listening) {
       recognition.stop();
     }
@@ -174,7 +178,7 @@ function applyDigits(digits) {
   }
 
   setSignal("success");
-  setStatus(`Correct. Accepted ${consumedDigits.length} digit(s): ${consumedDigits.join(" ")}.`);
+  setStatus(withMobileContinue(`Correct. Accepted ${consumedDigits.length} digit(s): ${consumedDigits.join(" ")}.`));
   return {
     ok: true,
     consumedDigits,
@@ -371,3 +375,4 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
+
