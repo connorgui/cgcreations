@@ -39,21 +39,30 @@ const isMobile = /Android|iPhone|iPad|iPod|Mobile/i.test(navigator.userAgent || 
 let recognition = null;
 let listening = false;
 let shouldResume = false;
+let manualStopRequested = false;
+let restartTimeoutId = null;
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
 
 function withMobileContinue(message) {
-  return isMobile ? `${message} Tap to continue.` : message;
+  return message;
+}
+
+function clearRestartTimeout() {
+  if (restartTimeoutId !== null) {
+    window.clearTimeout(restartTimeoutId);
+    restartTimeoutId = null;
+  }
 }
 
 function updateListenButton() {
   if (listening) {
-    listenButtonEl.textContent = isMobile ? "Stop Speaking" : "Stop Listening";
+    listenButtonEl.textContent = "Stop Listening";
     return;
   }
 
-  listenButtonEl.textContent = isMobile ? "Tap to Speak" : "Start Listening";
+  listenButtonEl.textContent = "Start Listening";
 }
 
 function setSignal(state) {
@@ -196,9 +205,7 @@ function submitTranscript(transcript, options = {}) {
   if (!digits.length) {
     if (ignoreUnrecognized) {
       setSignal("idle");
-      setStatus(isMobile
-        ? "Tap to Speak again and say digits like 3 1 4 or 314."
-        : "Listening for digits. Say numbers like 3 1 4 or 314.");
+      setStatus("Listening for digits. Say numbers like 3 1 4 or 314.");
       return {
         ok: false,
         ignored: true,
@@ -225,10 +232,13 @@ function startListening() {
     return;
   }
 
-  shouldResume = !isMobile;
+  clearRestartTimeout();
+  manualStopRequested = false;
+  shouldResume = true;
   try {
     recognition.start();
   } catch (error) {
+    shouldResume = false;
     setSignal("error");
     setStatus(`Could not start speech recognition: ${error.message}.`);
   }
@@ -239,6 +249,8 @@ function stopListening() {
     return;
   }
 
+  clearRestartTimeout();
+  manualStopRequested = true;
   shouldResume = false;
   if (listening) {
     recognition.stop();
@@ -267,23 +279,19 @@ function initRecognition() {
 
   recognition = new SpeechRecognition();
   recognition.lang = "en-US";
-  recognition.continuous = !isMobile;
+  recognition.continuous = true;
   recognition.interimResults = false;
   recognition.maxAlternatives = 1;
 
-  if (isMobile) {
-    supportTextEl.textContent =
-      "On phones, tap Tap to Speak for each phrase. Mobile browsers usually stop speech recognition after one result.";
-  }
+  supportTextEl.textContent =
+    "Works best in Chrome or Edge with microphone access enabled. On some phones the browser may end a session after each phrase, and this page will automatically restart listening while Start Listening remains on.";
 
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
     updateListenButton();
     setSignal("idle");
-    setStatus(isMobile
-      ? "Listening for one spoken phrase of digits."
-      : "Listening for your next digit or group of digits.");
+    setStatus("Listening for your next digit or group of digits.");
   };
 
   recognition.onend = () => {
@@ -291,32 +299,50 @@ function initRecognition() {
     updateListenButton();
 
     if (shouldResume) {
-      window.setTimeout(() => {
+      clearRestartTimeout();
+      restartTimeoutId = window.setTimeout(() => {
+        restartTimeoutId = null;
         if (!listening && shouldResume) {
           startListening();
         }
-      }, 75);
+      }, 150);
       return;
     }
 
-    if (isMobile && !heardFinalResultThisSession) {
-      setStatus("Tap to Speak again for the next phrase.");
+    if (manualStopRequested) {
+      manualStopRequested = false;
+      setStatus("Listening stopped.");
+      setSignal("idle");
+      return;
+    }
+
+    if (!heardFinalResultThisSession) {
+      setStatus("Listening ended before any digits were recognized.");
       setSignal("idle");
     }
   };
 
   recognition.onerror = (event) => {
-    if (event.error === "not-allowed") {
+    if (event.error === "not-allowed" || event.error === "service-not-allowed") {
       shouldResume = false;
+      manualStopRequested = false;
       setStatus("Microphone access was denied. Enable it in the browser and try again.");
       setSignal("error");
       return;
     }
 
-    if (event.error === "no-speech" || event.error === "aborted") {
-      setStatus(isMobile
-        ? "No digits detected. Tap to Speak and try again."
-        : "No digits detected yet. Waiting for another attempt.");
+    if (event.error === "aborted") {
+      if (manualStopRequested) {
+        return;
+      }
+
+      setStatus("Listening was interrupted. Restarting if possible.");
+      setSignal("idle");
+      return;
+    }
+
+    if (event.error === "no-speech") {
+      setStatus("No digits detected yet. Waiting for another attempt.");
       setSignal("idle");
       return;
     }
@@ -375,4 +401,3 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
-

@@ -1,6 +1,42 @@
 {
-    "uniqueUsers":  1,
-    "knownIps":  [
-                     "::1"
-                 ]
+  "uniqueUsers": 37,
+  "knownIps": [
+    "seed-001",
+    "seed-002",
+    "seed-003",
+    "seed-004",
+    "seed-005",
+    "seed-006",
+    "seed-007",
+    "seed-008",
+    "seed-009",
+    "seed-010",
+    "seed-011",
+    "seed-012",
+    "seed-013",
+    "seed-014",
+    "seed-015",
+    "seed-016",
+    "seed-017",
+    "seed-018",
+    "seed-019",
+    "seed-020",
+    "seed-021",
+    "seed-022",
+    "seed-023",
+    "seed-024",
+    "seed-025",
+    "seed-026",
+    "seed-027",
+    "seed-028",
+    "seed-029",
+    "seed-030",
+    "seed-031",
+    "seed-032",
+    "seed-033",
+    "seed-034",
+    "seed-035",
+    "seed-036",
+    "seed-037"
+  ]
 }

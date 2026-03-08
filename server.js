@@ -4,7 +4,10 @@ const path = require('path');
 const { URL } = require('url');
 
 const root = __dirname;
-const analyticsPath = path.join(root, 'analytics.json');
+const bundledAnalyticsPath = path.join(root, 'analytics.json');
+const analyticsPath = process.env.ANALYTICS_PATH
+  ? path.resolve(process.env.ANALYTICS_PATH)
+  : bundledAnalyticsPath;
 const port = Number(process.env.PORT || 8080);
 
 function normalizeAnalyticsData(raw) {
@@ -12,29 +15,52 @@ function normalizeAnalyticsData(raw) {
   return { uniqueUsers: knownIps.length, knownIps };
 }
 
+function ensureAnalyticsDirectory() {
+  fs.mkdirSync(path.dirname(analyticsPath), { recursive: true });
+}
+
+function readAnalyticsFile(filePath) {
+  const raw = JSON.parse(fs.readFileSync(filePath, 'utf8'));
+  return normalizeAnalyticsData(raw);
+}
+
+function writeAnalytics(data) {
+  ensureAnalyticsDirectory();
+  fs.writeFileSync(analyticsPath, JSON.stringify(data, null, 2));
+}
+
+function createInitialAnalytics() {
+  if (analyticsPath !== bundledAnalyticsPath && fs.existsSync(bundledAnalyticsPath)) {
+    try {
+      const seeded = readAnalyticsFile(bundledAnalyticsPath);
+      writeAnalytics(seeded);
+      return seeded;
+    } catch {
+      // Fall back to an empty analytics file if the bundled seed is invalid.
+    }
+  }
+
+  const initial = { uniqueUsers: 0, knownIps: [] };
+  writeAnalytics(initial);
+  return initial;
+}
+
 function readAnalytics() {
+  ensureAnalyticsDirectory();
+
   if (!fs.existsSync(analyticsPath)) {
-    const initial = { uniqueUsers: 0, knownIps: [] };
-    writeAnalytics(initial);
-    return initial;
+    return createInitialAnalytics();
   }
 
   try {
-    const raw = JSON.parse(fs.readFileSync(analyticsPath, 'utf8'));
-    const normalized = normalizeAnalyticsData(raw);
-    if (raw.uniqueUsers !== normalized.uniqueUsers || !Array.isArray(raw.knownIps)) {
-      writeAnalytics(normalized);
-    }
+    const normalized = readAnalyticsFile(analyticsPath);
+    writeAnalytics(normalized);
     return normalized;
   } catch {
     const fallback = { uniqueUsers: 0, knownIps: [] };
     writeAnalytics(fallback);
     return fallback;
   }
-}
-
-function writeAnalytics(data) {
-  fs.writeFileSync(analyticsPath, JSON.stringify(data, null, 2));
 }
 
 function getContentType(filePath) {
@@ -177,4 +203,5 @@ const server = http.createServer(async (req, res) => {
 
 server.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
+  console.log(`Analytics storage path: ${analyticsPath}`);
 });
