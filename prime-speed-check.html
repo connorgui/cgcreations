@@ -1,0 +1,105 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Prime Speed Check</title>
+  <link rel="stylesheet" href="/styles.css?v=20260309a">
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <a class="back-link" href="/index.html">Back to Creations</a>
+      <p class="eyebrow">Fast Pattern Drill</p>
+      <h1>Prime Speed Check</h1>
+      <p class="intro">
+        Decide as quickly as you can whether each number is prime. Pick a preset range or build your own,
+        then race through the stream one number at a time.
+      </p>
+
+      <div class="stats">
+        <article class="stat-card">
+          <span class="stat-label">Correct</span>
+          <strong id="prime-correct-count">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Wrong</span>
+          <strong id="prime-wrong-count">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Current Streak</span>
+          <strong id="prime-streak-count">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Average Time</span>
+          <strong id="prime-average-time">-</strong>
+        </article>
+      </div>
+
+      <section class="prime-config" aria-label="Difficulty selection">
+        <div class="section-head section-head-stack">
+          <h2>Choose a Level</h2>
+          <p class="support-text">Medium is selected by default.</p>
+        </div>
+        <div class="level-grid" role="radiogroup" aria-label="Prime range difficulty">
+          <button class="level-pill is-selected" type="button" data-level="easy">Easy<br><span>0-50</span></button>
+          <button class="level-pill" type="button" data-level="medium">Medium<br><span>0-120</span></button>
+          <button class="level-pill" type="button" data-level="hard">Hard<br><span>0-300</span></button>
+          <button class="level-pill" type="button" data-level="custom">Custom<br><span>Your range</span></button>
+        </div>
+        <div id="custom-range-wrap" class="custom-range hidden">
+          <label class="form-field" for="custom-min">
+            Minimum Number
+            <input id="custom-min" type="number" inputmode="numeric" min="0" value="0">
+          </label>
+          <label class="form-field" for="custom-max">
+            Maximum Number
+            <input id="custom-max" type="number" inputmode="numeric" min="1" value="200">
+          </label>
+        </div>
+      </section>
+
+      <div class="spoken-wrap">
+        <span class="spoken-label">Current Range</span>
+        <strong id="prime-range-label" class="prime-range-label">0-120</strong>
+      </div>
+
+      <section class="prime-question" aria-label="Prime prompt">
+        <span class="spoken-label">Current Number</span>
+        <strong id="prime-current-number" class="prime-number-display">-</strong>
+      </section>
+
+      <div class="status-wrap">
+        <div id="prime-signal-light" class="signal signal-idle" aria-live="polite"></div>
+        <div class="status-copy">
+          <p class="status-label">Last Result</p>
+          <p id="prime-status-text" class="status-text">Press Start Round to begin.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="prime-start-button" type="button">Start Round</button>
+        <button id="prime-reset-button" type="button" class="secondary">Reset Score</button>
+      </div>
+
+      <div class="answer-grid">
+        <button id="prime-yes-button" type="button" class="answer-button" disabled>Prime</button>
+        <button id="prime-no-button" type="button" class="answer-button secondary" disabled>Not Prime</button>
+      </div>
+
+      <section class="info">
+        <h2>How It Works</h2>
+        <p class="support-text">
+          Prime numbers are greater than 1 and divisible only by 1 and themselves. In this challenge, 0 and 1 count as not prime.
+        </p>
+      </section>
+    </section>
+  </main>
+
+  <script src="/prime-speed-check.js?v=20260309a"></script>
+  <script src="/analytics.js?v=20260307a"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>

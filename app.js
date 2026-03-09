@@ -146,7 +146,10 @@ function rememberTranscriptCandidate(transcript) {
     return;
   }
 
-  if (digitCount > bestTranscriptDigitCount || normalizedTranscript.length >= bestTranscriptCandidate.length) {
+  if (
+    digitCount > bestTranscriptDigitCount ||
+    (digitCount === bestTranscriptDigitCount && normalizedTranscript.length > bestTranscriptCandidate.length)
+  ) {
     bestTranscriptCandidate = normalizedTranscript;
     bestTranscriptDigitCount = digitCount;
   }
@@ -407,11 +410,15 @@ function initRecognition() {
       const result = event.results[index];
       const transcript = (result[0]?.transcript ?? "").trim();
 
-      if (transcript) {
+      if (transcript && (!isMobile || !heardFinalResultThisSession)) {
         rememberTranscriptCandidate(transcript);
       }
 
       if (!result.isFinal) {
+        continue;
+      }
+
+      if (isMobile && heardFinalResultThisSession) {
         continue;
       }
 
@@ -461,5 +468,6 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
+
 
 
