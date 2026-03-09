@@ -418,7 +418,7 @@ function initRecognition() {
         lastTranscriptCandidate = transcript;
       }
 
-      const shouldProcessInterim = isMobile && !result.isFinal && extractDigits(transcript).length > 0;
+      const shouldProcessInterim = isMobile && !result.isFinal && extractDigits(transcript).length === 1;
       if (!result.isFinal && !shouldProcessInterim) {
         continue;
       }
@@ -468,5 +468,6 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
+
 
 
