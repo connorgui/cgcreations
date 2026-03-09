@@ -411,10 +411,6 @@ function initRecognition() {
         rememberTranscriptCandidate(transcript);
       }
 
-      if (isMobile) {
-        continue;
-      }
-
       if (!result.isFinal) {
         continue;
       }
@@ -422,6 +418,8 @@ function initRecognition() {
       const processed = submitTranscript(transcript, { ignoreUnrecognized: true });
       if (processed && !processed.ignored) {
         heardFinalResultThisSession = true;
+        bestTranscriptCandidate = "";
+        bestTranscriptDigitCount = 0;
       }
     }
   };
@@ -463,4 +461,5 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
+
 
