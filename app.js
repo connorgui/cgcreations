@@ -42,16 +42,12 @@ let listening = false;
 let shouldResume = false;
 let manualStopRequested = false;
 let restartTimeoutId = null;
-let lastTranscriptCandidate = "";
-let lastProcessedTranscript = "";
+let bestTranscriptCandidate = "";
+let bestTranscriptDigitCount = 0;
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
 let hasResultToDisplay = false;
-
-function withMobileContinue(message) {
-  return message;
-}
 
 function clearRestartTimeout() {
   if (restartTimeoutId !== null) {
@@ -61,12 +57,7 @@ function clearRestartTimeout() {
 }
 
 function updateListenButton() {
-  if (listening) {
-    listenButtonEl.textContent = "Stop Listening";
-    return;
-  }
-
-  listenButtonEl.textContent = "Start Listening";
+  listenButtonEl.textContent = listening ? "Stop Listening" : "Start Listening";
 }
 
 function setSignal(state) {
@@ -148,6 +139,19 @@ function extractDigits(transcript) {
   return digits;
 }
 
+function rememberTranscriptCandidate(transcript) {
+  const normalizedTranscript = transcript.trim();
+  const digitCount = extractDigits(normalizedTranscript).length;
+  if (!digitCount) {
+    return;
+  }
+
+  if (digitCount > bestTranscriptDigitCount || normalizedTranscript.length >= bestTranscriptCandidate.length) {
+    bestTranscriptCandidate = normalizedTranscript;
+    bestTranscriptDigitCount = digitCount;
+  }
+}
+
 function applyDigits(digits) {
   const consumedDigits = [];
   let incorrectDigit = null;
@@ -175,7 +179,7 @@ function applyDigits(digits) {
     incrementWrongCount();
     hasResultToDisplay = true;
     setSignal("error");
-    setStatus(withMobileContinue(`Incorrect at ${incorrectDigit}. Expected ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`));
+    setStatus(`Incorrect at ${incorrectDigit}. Expected ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`);
     return {
       ok: false,
       ignored: false,
@@ -191,7 +195,7 @@ function applyDigits(digits) {
     shouldResume = false;
     hasResultToDisplay = true;
     setSignal("success");
-    setStatus(withMobileContinue("Complete. You matched all available Pi digits in this demo."));
+    setStatus("Complete. You matched all available Pi digits in this demo.");
     if (recognition && listening) {
       recognition.stop();
     }
@@ -200,7 +204,7 @@ function applyDigits(digits) {
 
   hasResultToDisplay = true;
   setSignal("success");
-  setStatus(withMobileContinue(`Correct. Accepted ${consumedDigits.length} digit(s): ${consumedDigits.join(" ")}.`));
+  setStatus(`Correct. Accepted ${consumedDigits.length} digit(s): ${consumedDigits.join(" ")}.`);
   return {
     ok: true,
     ignored: false,
@@ -233,37 +237,21 @@ function submitTranscript(transcript, options = {}) {
     hasResultToDisplay = true;
     setSignal("error");
     incrementWrongCount();
-    setStatus(`Heard "${transcript.trim() || "nothing"}". Please say one or more digits.`);
+    setStatus(`Heard \"${transcript.trim() || "nothing"}\". Please say one or more digits.`);
     return { ok: false, ignored: false, consumedDigits: [], incorrectDigit: null, expectedDigit: getExpectedDigit(), correctCount, wrongCount };
   }
 
   return applyDigits(digits);
 }
 
-function processTranscriptForSession(transcript) {
-  const normalizedTranscript = transcript.trim();
-  if (!normalizedTranscript) {
-    return null;
-  }
-
-  if (normalizedTranscript === lastProcessedTranscript) {
-    return null;
-  }
-
-  const result = submitTranscript(normalizedTranscript, { ignoreUnrecognized: true });
-  if (!result.ignored) {
-    lastProcessedTranscript = normalizedTranscript;
-  }
-  return result;
-}
-
-function processPendingTranscriptCandidate() {
-  if (!lastTranscriptCandidate) {
+function processBestTranscriptCandidate() {
+  if (!bestTranscriptCandidate) {
     return false;
   }
 
-  const result = processTranscriptForSession(lastTranscriptCandidate);
-  lastTranscriptCandidate = "";
+  const result = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
+  bestTranscriptCandidate = "";
+  bestTranscriptDigitCount = 0;
   return Boolean(result && !result.ignored);
 }
 
@@ -326,26 +314,37 @@ function initRecognition() {
   recognition.maxAlternatives = 1;
 
   supportTextEl.textContent =
-    "Works best in Chrome or Edge with microphone access enabled. On some phones the browser may end a session after each phrase, and this page will automatically restart listening while Start Listening remains on.";
+    "Works best in Chrome or Edge with microphone access enabled. On phones, the app waits for each short speaking burst to finish, then checks the best digits it heard.";
 
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
-    lastTranscriptCandidate = "";
-    lastProcessedTranscript = "";
+    bestTranscriptCandidate = "";
+    bestTranscriptDigitCount = 0;
     updateListenButton();
     if (!hasResultToDisplay) {
       setSignal("idle");
     }
-    setStatus("Listening for your next digit or group of digits.");
+    if (!hasResultToDisplay) {
+      setStatus("Listening for your next digit or group of digits.");
+    }
   };
 
   recognition.onend = () => {
     listening = false;
     updateListenButton();
 
-    if (!heardFinalResultThisSession) {
-      processPendingTranscriptCandidate();
+    if (manualStopRequested) {
+      manualStopRequested = false;
+      bestTranscriptCandidate = "";
+      bestTranscriptDigitCount = 0;
+      clearDisplayedResult();
+      setStatus("Listening stopped.");
+      return;
+    }
+
+    if (!heardFinalResultThisSession && processBestTranscriptCandidate()) {
+      heardFinalResultThisSession = true;
     }
 
     if (shouldResume) {
@@ -359,12 +358,6 @@ function initRecognition() {
       return;
     }
 
-    if (manualStopRequested) {
-      manualStopRequested = false;
-      clearDisplayedResult();
-      setStatus("Listening stopped.");
-      return;
-    }
 
     if (!heardFinalResultThisSession) {
       setStatus("Listening for digits. Say numbers like 3 1 4 or 314.");
@@ -415,18 +408,20 @@ function initRecognition() {
       const transcript = (result[0]?.transcript ?? "").trim();
 
       if (transcript) {
-        lastTranscriptCandidate = transcript;
+        rememberTranscriptCandidate(transcript);
       }
 
-      const shouldProcessInterim = isMobile && !result.isFinal && extractDigits(transcript).length === 1;
-      if (!result.isFinal && !shouldProcessInterim) {
+      if (isMobile) {
         continue;
       }
 
-      const processed = processTranscriptForSession(transcript);
+      if (!result.isFinal) {
+        continue;
+      }
+
+      const processed = submitTranscript(transcript, { ignoreUnrecognized: true });
       if (processed && !processed.ignored) {
         heardFinalResultThisSession = true;
-        lastTranscriptCandidate = "";
       }
     }
   };
@@ -468,6 +463,4 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
-
-
 
