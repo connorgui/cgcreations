@@ -10,6 +10,7 @@ const DIGIT_WORDS = {
   to: "2",
   too: "2",
   three: "3",
+  tree: "3",
   four: "4",
   for: "4",
   five: "5",
@@ -41,9 +42,11 @@ let listening = false;
 let shouldResume = false;
 let manualStopRequested = false;
 let restartTimeoutId = null;
+let lastTranscriptCandidate = "";
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
+let hasResultToDisplay = false;
 
 function withMobileContinue(message) {
   return message;
@@ -68,6 +71,11 @@ function updateListenButton() {
 function setSignal(state) {
   signalLightEl.classList.remove("signal-idle", "signal-success", "signal-error");
   signalLightEl.classList.add(`signal-${state}`);
+}
+
+function clearDisplayedResult() {
+  hasResultToDisplay = false;
+  setSignal("idle");
 }
 
 function formatPiDigits(digits) {
@@ -111,7 +119,7 @@ function resetProgress() {
   wrongCount = 0;
   setSpokenDigit("-");
   updateScoreboard();
-  setSignal("idle");
+  clearDisplayedResult();
   setStatus("Score reset. Press start and say the first digits of Pi.");
 }
 
@@ -164,6 +172,7 @@ function applyDigits(digits) {
 
   if (incorrectDigit) {
     incrementWrongCount();
+    hasResultToDisplay = true;
     setSignal("error");
     setStatus(withMobileContinue(`Incorrect at ${incorrectDigit}. Expected ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`));
     return {
@@ -178,6 +187,7 @@ function applyDigits(digits) {
 
   if (correctCount === PI_DIGITS.length) {
     shouldResume = false;
+    hasResultToDisplay = true;
     setSignal("success");
     setStatus(withMobileContinue("Complete. You matched all available Pi digits in this demo."));
     if (recognition && listening) {
@@ -186,6 +196,7 @@ function applyDigits(digits) {
     return { ok: true, consumedDigits, incorrectDigit: null, expectedDigit: null, correctCount, wrongCount };
   }
 
+  hasResultToDisplay = true;
   setSignal("success");
   setStatus(withMobileContinue(`Correct. Accepted ${consumedDigits.length} digit(s): ${consumedDigits.join(" ")}.`));
   return {
@@ -204,7 +215,9 @@ function submitTranscript(transcript, options = {}) {
 
   if (!digits.length) {
     if (ignoreUnrecognized) {
-      setSignal("idle");
+      if (!hasResultToDisplay) {
+        setSignal("idle");
+      }
       setStatus("Listening for digits. Say numbers like 3 1 4 or 314.");
       return {
         ok: false,
@@ -218,6 +231,7 @@ function submitTranscript(transcript, options = {}) {
     }
 
     setSpokenDigit("?");
+    hasResultToDisplay = true;
     setSignal("error");
     incrementWrongCount();
     setStatus(`Heard "${transcript.trim() || "nothing"}". Please say one or more digits.`);
@@ -239,6 +253,7 @@ function startListening() {
     recognition.start();
   } catch (error) {
     shouldResume = false;
+    hasResultToDisplay = true;
     setSignal("error");
     setStatus(`Could not start speech recognition: ${error.message}.`);
   }
@@ -260,7 +275,7 @@ function stopListening() {
 function toggleListening() {
   if (listening) {
     stopListening();
-    setSignal("idle");
+    clearDisplayedResult();
     setStatus("Listening stopped.");
     return;
   }
@@ -273,6 +288,7 @@ function initRecognition() {
     listenButtonEl.disabled = true;
     supportTextEl.textContent =
       "Speech recognition is not available in this browser. Use a recent Chrome or Edge build.";
+    hasResultToDisplay = true;
     setStatus("Speech recognition unsupported in this browser. Use the manual test controls below.");
     return;
   }
@@ -280,7 +296,7 @@ function initRecognition() {
   recognition = new SpeechRecognition();
   recognition.lang = "en-US";
   recognition.continuous = true;
-  recognition.interimResults = false;
+  recognition.interimResults = true;
   recognition.maxAlternatives = 1;
 
   supportTextEl.textContent =
@@ -289,8 +305,11 @@ function initRecognition() {
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
+    lastTranscriptCandidate = "";
     updateListenButton();
-    setSignal("idle");
+    if (!hasResultToDisplay) {
+      setSignal("idle");
+    }
     setStatus("Listening for your next digit or group of digits.");
   };
 
@@ -299,6 +318,12 @@ function initRecognition() {
     updateListenButton();
 
     if (shouldResume) {
+      if (!heardFinalResultThisSession && lastTranscriptCandidate) {
+        heardFinalResultThisSession = true;
+        submitTranscript(lastTranscriptCandidate, { ignoreUnrecognized: true });
+        lastTranscriptCandidate = "";
+      }
+
       clearRestartTimeout();
       restartTimeoutId = window.setTimeout(() => {
         restartTimeoutId = null;
@@ -311,14 +336,23 @@ function initRecognition() {
 
     if (manualStopRequested) {
       manualStopRequested = false;
+      clearDisplayedResult();
       setStatus("Listening stopped.");
-      setSignal("idle");
+      return;
+    }
+
+    if (!heardFinalResultThisSession && lastTranscriptCandidate) {
+      heardFinalResultThisSession = true;
+      submitTranscript(lastTranscriptCandidate, { ignoreUnrecognized: true });
+      lastTranscriptCandidate = "";
       return;
     }
 
     if (!heardFinalResultThisSession) {
       setStatus("Listening ended before any digits were recognized.");
-      setSignal("idle");
+      if (!hasResultToDisplay) {
+        setSignal("idle");
+      }
     }
   };
 
@@ -326,6 +360,7 @@ function initRecognition() {
     if (event.error === "not-allowed" || event.error === "service-not-allowed") {
       shouldResume = false;
       manualStopRequested = false;
+      hasResultToDisplay = true;
       setStatus("Microphone access was denied. Enable it in the browser and try again.");
       setSignal("error");
       return;
@@ -337,16 +372,21 @@ function initRecognition() {
       }
 
       setStatus("Listening was interrupted. Restarting if possible.");
-      setSignal("idle");
+      if (!hasResultToDisplay) {
+        setSignal("idle");
+      }
       return;
     }
 
     if (event.error === "no-speech") {
       setStatus("No digits detected yet. Waiting for another attempt.");
-      setSignal("idle");
+      if (!hasResultToDisplay) {
+        setSignal("idle");
+      }
       return;
     }
 
+    hasResultToDisplay = true;
     setStatus(`Speech recognition error: ${event.error}.`);
     setSignal("error");
   };
@@ -354,13 +394,19 @@ function initRecognition() {
   recognition.onresult = (event) => {
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
+      const transcript = (result[0]?.transcript ?? "").trim();
+
+      if (transcript) {
+        lastTranscriptCandidate = transcript;
+      }
+
       if (!result.isFinal) {
         continue;
       }
 
-      const transcript = result[0]?.transcript ?? "";
       heardFinalResultThisSession = true;
       submitTranscript(transcript, { ignoreUnrecognized: true });
+      lastTranscriptCandidate = "";
     }
   };
 }

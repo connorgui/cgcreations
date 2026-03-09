@@ -48,10 +48,11 @@ async function lookupCountry(ipAddress) {
   }
 }
 
-function logNewUniqueVisitor(ipAddress, uniqueUsers, country) {
+function logVisitorVisit(ipAddress, uniqueUsers, country, isNewUnique) {
   const timestamp = new Date().toISOString();
   const location = country || 'Unknown';
-  console.log(`[visitor] ${timestamp} new unique visitor ip=${ipAddress} country=${location} total=${uniqueUsers}`);
+  const visitType = isNewUnique ? 'new-unique' : 'repeat';
+  console.log(`[visitor] ${timestamp} type=${visitType} ip=${ipAddress} country=${location} total=${uniqueUsers}`);
 }
 
 function createInitialAnalytics() {
@@ -207,13 +208,17 @@ const server = http.createServer(async (req, res) => {
 
     const analytics = readAnalytics();
     const ipAddress = getClientIp(req);
+    const isNewUnique = Boolean(ipAddress) && !analytics.knownIps.includes(ipAddress);
 
-    if (ipAddress && !analytics.knownIps.includes(ipAddress)) {
+    if (isNewUnique) {
       analytics.knownIps.push(ipAddress);
       analytics.uniqueUsers = analytics.knownIps.length;
       writeAnalytics(analytics);
+    }
+
+    if (ipAddress) {
       const country = await lookupCountry(ipAddress);
-      logNewUniqueVisitor(ipAddress, analytics.uniqueUsers, country);
+      logVisitorVisit(ipAddress, analytics.uniqueUsers, country, isNewUnique);
     }
 
     sendJson(res, 200, { uniqueUsers: analytics.uniqueUsers });
