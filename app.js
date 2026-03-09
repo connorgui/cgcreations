@@ -43,6 +43,7 @@ let shouldResume = false;
 let manualStopRequested = false;
 let restartTimeoutId = null;
 let lastTranscriptCandidate = "";
+let lastProcessedTranscript = "";
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
@@ -177,6 +178,7 @@ function applyDigits(digits) {
     setStatus(withMobileContinue(`Incorrect at ${incorrectDigit}. Expected ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`));
     return {
       ok: false,
+      ignored: false,
       consumedDigits,
       incorrectDigit,
       expectedDigit,
@@ -193,7 +195,7 @@ function applyDigits(digits) {
     if (recognition && listening) {
       recognition.stop();
     }
-    return { ok: true, consumedDigits, incorrectDigit: null, expectedDigit: null, correctCount, wrongCount };
+    return { ok: true, ignored: false, consumedDigits, incorrectDigit: null, expectedDigit: null, correctCount, wrongCount };
   }
 
   hasResultToDisplay = true;
@@ -201,6 +203,7 @@ function applyDigits(digits) {
   setStatus(withMobileContinue(`Correct. Accepted ${consumedDigits.length} digit(s): ${consumedDigits.join(" ")}.`));
   return {
     ok: true,
+    ignored: false,
     consumedDigits,
     incorrectDigit: null,
     expectedDigit: getExpectedDigit(),
@@ -215,10 +218,6 @@ function submitTranscript(transcript, options = {}) {
 
   if (!digits.length) {
     if (ignoreUnrecognized) {
-      if (!hasResultToDisplay) {
-        setSignal("idle");
-      }
-      setStatus("Listening for digits. Say numbers like 3 1 4 or 314.");
       return {
         ok: false,
         ignored: true,
@@ -239,6 +238,33 @@ function submitTranscript(transcript, options = {}) {
   }
 
   return applyDigits(digits);
+}
+
+function processTranscriptForSession(transcript) {
+  const normalizedTranscript = transcript.trim();
+  if (!normalizedTranscript) {
+    return null;
+  }
+
+  if (normalizedTranscript === lastProcessedTranscript) {
+    return null;
+  }
+
+  const result = submitTranscript(normalizedTranscript, { ignoreUnrecognized: true });
+  if (!result.ignored) {
+    lastProcessedTranscript = normalizedTranscript;
+  }
+  return result;
+}
+
+function processPendingTranscriptCandidate() {
+  if (!lastTranscriptCandidate) {
+    return false;
+  }
+
+  const result = processTranscriptForSession(lastTranscriptCandidate);
+  lastTranscriptCandidate = "";
+  return Boolean(result && !result.ignored);
 }
 
 function startListening() {
@@ -306,6 +332,7 @@ function initRecognition() {
     listening = true;
     heardFinalResultThisSession = false;
     lastTranscriptCandidate = "";
+    lastProcessedTranscript = "";
     updateListenButton();
     if (!hasResultToDisplay) {
       setSignal("idle");
@@ -317,13 +344,11 @@ function initRecognition() {
     listening = false;
     updateListenButton();
 
-    if (shouldResume) {
-      if (!heardFinalResultThisSession && lastTranscriptCandidate) {
-        heardFinalResultThisSession = true;
-        submitTranscript(lastTranscriptCandidate, { ignoreUnrecognized: true });
-        lastTranscriptCandidate = "";
-      }
+    if (!heardFinalResultThisSession) {
+      processPendingTranscriptCandidate();
+    }
 
+    if (shouldResume) {
       clearRestartTimeout();
       restartTimeoutId = window.setTimeout(() => {
         restartTimeoutId = null;
@@ -341,15 +366,8 @@ function initRecognition() {
       return;
     }
 
-    if (!heardFinalResultThisSession && lastTranscriptCandidate) {
-      heardFinalResultThisSession = true;
-      submitTranscript(lastTranscriptCandidate, { ignoreUnrecognized: true });
-      lastTranscriptCandidate = "";
-      return;
-    }
-
     if (!heardFinalResultThisSession) {
-      setStatus("Listening ended before any digits were recognized.");
+      setStatus("Listening for digits. Say numbers like 3 1 4 or 314.");
       if (!hasResultToDisplay) {
         setSignal("idle");
       }
@@ -405,7 +423,7 @@ function initRecognition() {
       }
 
       heardFinalResultThisSession = true;
-      submitTranscript(transcript, { ignoreUnrecognized: true });
+      processTranscriptForSession(transcript);
       lastTranscriptCandidate = "";
     }
   };
@@ -447,3 +465,4 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
+
