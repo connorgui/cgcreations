@@ -8,6 +8,7 @@ const bundledAnalyticsPath = path.join(root, 'analytics.json');
 const analyticsPath = process.env.ANALYTICS_PATH
   ? path.resolve(process.env.ANALYTICS_PATH)
   : bundledAnalyticsPath;
+const ipinfoToken = process.env.IPINFO_TOKEN || '';
 const port = Number(process.env.PORT || 8080);
 
 function normalizeAnalyticsData(raw) {
@@ -27,6 +28,30 @@ function readAnalyticsFile(filePath) {
 function writeAnalytics(data) {
   ensureAnalyticsDirectory();
   fs.writeFileSync(analyticsPath, JSON.stringify(data, null, 2));
+}
+
+async function lookupCountry(ipAddress) {
+  if (!ipinfoToken || !ipAddress) {
+    return null;
+  }
+
+  try {
+    const response = await fetch(`https://api.ipinfo.io/lite/${encodeURIComponent(ipAddress)}?token=${encodeURIComponent(ipinfoToken)}`);
+    if (!response.ok) {
+      return null;
+    }
+
+    const data = await response.json();
+    return typeof data.country === 'string' && data.country.trim() ? data.country.trim() : null;
+  } catch {
+    return null;
+  }
+}
+
+function logNewUniqueVisitor(ipAddress, uniqueUsers, country) {
+  const timestamp = new Date().toISOString();
+  const location = country || 'Unknown';
+  console.log(`[visitor] ${timestamp} new unique visitor ip=${ipAddress} country=${location} total=${uniqueUsers}`);
 }
 
 function createInitialAnalytics() {
@@ -187,6 +212,8 @@ const server = http.createServer(async (req, res) => {
       analytics.knownIps.push(ipAddress);
       analytics.uniqueUsers = analytics.knownIps.length;
       writeAnalytics(analytics);
+      const country = await lookupCountry(ipAddress);
+      logNewUniqueVisitor(ipAddress, analytics.uniqueUsers, country);
     }
 
     sendJson(res, 200, { uniqueUsers: analytics.uniqueUsers });
@@ -204,4 +231,7 @@ const server = http.createServer(async (req, res) => {
 server.listen(port, () => {
   console.log(`Server running on http://localhost:${port}`);
   console.log(`Analytics storage path: ${analyticsPath}`);
+  if (!ipinfoToken) {
+    console.log('IP geolocation logging is disabled. Set IPINFO_TOKEN to log visitor countries.');
+  }
 });

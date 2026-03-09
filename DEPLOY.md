@@ -27,6 +27,18 @@ To make the count survive future deploys and restarts on Render:
 
 If you deploy without a persistent disk, the count can still reset because the service filesystem is ephemeral.
 
+## Visitor logs with country
+
+The app can log new unique visitors to the Render logs with timestamp, IP address, country, and total unique user count.
+
+To enable country logging:
+
+1. Create an IPinfo Lite token.
+2. In Render, add the environment variable `IPINFO_TOKEN` with that token value.
+3. Redeploy the service.
+
+If `IPINFO_TOKEN` is not set, the app still logs new unique visitors, but country will show as `Unknown`.
+
 ## Visitor count
 
 The visitor count is based on unique IP addresses seen by the server.
