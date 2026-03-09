@@ -418,13 +418,16 @@ function initRecognition() {
         lastTranscriptCandidate = transcript;
       }
 
-      if (!result.isFinal) {
+      const shouldProcessInterim = isMobile && !result.isFinal && extractDigits(transcript).length > 0;
+      if (!result.isFinal && !shouldProcessInterim) {
         continue;
       }
 
-      heardFinalResultThisSession = true;
-      processTranscriptForSession(transcript);
-      lastTranscriptCandidate = "";
+      const processed = processTranscriptForSession(transcript);
+      if (processed && !processed.ignored) {
+        heardFinalResultThisSession = true;
+        lastTranscriptCandidate = "";
+      }
     }
   };
 }
@@ -465,4 +468,5 @@ window.piVoiceAppTestApi = {
     isMobile
   })
 };
+
 
