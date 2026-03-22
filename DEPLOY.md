@@ -11,25 +11,34 @@ This project can be deployed as a Node web service.
    - Runtime: Node
    - Build command: `npm install`
    - Start command: `node server.js`
-5. After deploy, open the generated public URL.
+5. In Render, add the environment variable `DATABASE_URL` with your Neon connection string.
+6. If you want country logging, also add `IPINFO_TOKEN`.
+7. After deploy, open the generated public URL.
 
-## Keep the current visitor count on Render
+## Keep the current visitor count with Neon
 
-The app now supports an `ANALYTICS_PATH` environment variable. On first startup, if that file does not exist yet, the server seeds it from the bundled `analytics.json` file in this repo. That lets you carry the current count forward once instead of starting over.
+When `DATABASE_URL` is set, the server stores visitor IPs in Postgres instead of `analytics.json`.
+On the first startup against an empty database, the server seeds the table from the bundled `analytics.json` file in this repo. That lets you carry the current count forward once instead of starting over.
 
-To make the count survive future deploys and restarts on Render:
+To make the count survive future deploys and restarts:
 
-1. Upgrade the service to a plan that supports persistent disks.
-2. Attach a persistent disk in Render and mount it at `/var/data`.
-3. Set the environment variable `ANALYTICS_PATH=/var/data/analytics.json`.
-4. Deploy once. The server will copy the current analytics data into that disk-backed file the first time it starts.
-5. After that, future deploys will keep using the same file on the persistent disk.
+1. Create a Neon project.
+2. Copy the Neon connection string.
+3. In Render, add `DATABASE_URL` with that connection string.
+4. Deploy once. The server will create the `visitor_ips` table automatically.
+5. If the table is empty, the server will seed it from this repo's `analytics.json`.
+6. After that, future deploys will keep using the same Postgres data.
 
-If you deploy without a persistent disk, the count can still reset because the service filesystem is ephemeral.
+If `DATABASE_URL` is not set, the app falls back to file storage and the count can still reset on hosts with ephemeral filesystems.
+
+## Optional file-based fallback
+
+The app still supports `ANALYTICS_PATH` for file-based storage.
+Use that only if you are intentionally storing analytics in a file instead of Neon/Postgres.
 
 ## Visitor logs with country
 
-The app can log new unique visitors to the Render logs with timestamp, IP address, country, and total unique user count.
+The app can log visitor visits to the Render logs with timestamp, IP address, country, visit type, and total unique user count.
 
 To enable country logging:
 
@@ -37,16 +46,18 @@ To enable country logging:
 2. In Render, add the environment variable `IPINFO_TOKEN` with that token value.
 3. Redeploy the service.
 
-If `IPINFO_TOKEN` is not set, the app still logs new unique visitors, but country will show as `Unknown`.
+If `IPINFO_TOKEN` is not set, the app still logs visits, but country will show as `Unknown`.
 
 ## Visitor count
 
 The visitor count is based on unique IP addresses seen by the server.
+When `DATABASE_URL` is set, those IPs are stored in Postgres.
 Behind a proxy/CDN, `server.js` reads `x-forwarded-for` and `x-real-ip` first.
 
 ## Important note
 
-If your host uses ephemeral disk storage, analytics may reset on redeploy or restart unless `ANALYTICS_PATH` points to persistent storage.
+If you use file storage on a host with ephemeral disk storage, analytics may reset on redeploy or restart.
+Using Neon/Postgres avoids that reset.
 
 ## Local run with Node
 

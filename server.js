@@ -8,8 +8,12 @@ const bundledAnalyticsPath = path.join(root, 'analytics.json');
 const analyticsPath = process.env.ANALYTICS_PATH
   ? path.resolve(process.env.ANALYTICS_PATH)
   : bundledAnalyticsPath;
+const databaseUrl = process.env.DATABASE_URL || '';
 const ipinfoToken = process.env.IPINFO_TOKEN || '';
 const port = Number(process.env.PORT || 8080);
+
+let databasePool = null;
+let databaseSetupPromise = null;
 
 function normalizeAnalyticsData(raw) {
   const knownIps = Array.isArray(raw && raw.knownIps) ? raw.knownIps : [];
@@ -28,6 +32,24 @@ function readAnalyticsFile(filePath) {
 function writeAnalytics(data) {
   ensureAnalyticsDirectory();
   fs.writeFileSync(analyticsPath, JSON.stringify(data, null, 2));
+}
+
+function readSeedAnalytics() {
+  const candidatePaths = [analyticsPath, bundledAnalyticsPath];
+
+  for (const filePath of candidatePaths) {
+    if (!filePath || !fs.existsSync(filePath)) {
+      continue;
+    }
+
+    try {
+      return readAnalyticsFile(filePath);
+    } catch {
+      // Ignore invalid seed files and keep trying other candidates.
+    }
+  }
+
+  return { uniqueUsers: 0, knownIps: [] };
 }
 
 async function lookupCountry(ipAddress) {
@@ -71,7 +93,7 @@ function createInitialAnalytics() {
   return initial;
 }
 
-function readAnalytics() {
+function readFileAnalytics() {
   ensureAnalyticsDirectory();
 
   if (!fs.existsSync(analyticsPath)) {
@@ -87,6 +109,128 @@ function readAnalytics() {
     writeAnalytics(fallback);
     return fallback;
   }
+}
+
+async function getDatabasePool() {
+  if (!databaseUrl) {
+    return null;
+  }
+
+  if (!databasePool) {
+    const { Pool } = require('pg');
+    databasePool = new Pool({
+      connectionString: databaseUrl,
+      ssl: databaseUrl.includes('sslmode=disable') ? false : { rejectUnauthorized: false }
+    });
+  }
+
+  if (!databaseSetupPromise) {
+    databaseSetupPromise = initializeDatabase(databasePool);
+  }
+
+  await databaseSetupPromise;
+  return databasePool;
+}
+
+async function initializeDatabase(pool) {
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS visitor_ips (
+      ip_address TEXT PRIMARY KEY,
+      first_seen_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  const existingCount = await countDatabaseVisitors(pool);
+  if (existingCount > 0) {
+    return;
+  }
+
+  const seed = readSeedAnalytics();
+  if (!seed.knownIps.length) {
+    return;
+  }
+
+  const values = [];
+  const placeholders = [];
+
+  seed.knownIps.forEach((ipAddress, index) => {
+    values.push(ipAddress);
+    placeholders.push(`($${index + 1})`);
+  });
+
+  await pool.query(
+    `INSERT INTO visitor_ips (ip_address) VALUES ${placeholders.join(', ')} ON CONFLICT (ip_address) DO NOTHING`,
+    values
+  );
+}
+
+async function countDatabaseVisitors(pool) {
+  const result = await pool.query('SELECT COUNT(*)::int AS unique_users FROM visitor_ips');
+  return Number(result.rows[0] && result.rows[0].unique_users) || 0;
+}
+
+async function readDatabaseAnalytics() {
+  const pool = await getDatabasePool();
+  const uniqueUsers = await countDatabaseVisitors(pool);
+  return { uniqueUsers };
+}
+
+async function recordDatabaseVisit(ipAddress) {
+  const pool = await getDatabasePool();
+
+  if (!ipAddress) {
+    const uniqueUsers = await countDatabaseVisitors(pool);
+    return { uniqueUsers, isNewUnique: false };
+  }
+
+  const result = await pool.query(
+    `
+      WITH inserted AS (
+        INSERT INTO visitor_ips (ip_address)
+        VALUES ($1)
+        ON CONFLICT (ip_address) DO NOTHING
+        RETURNING 1
+      )
+      SELECT
+        EXISTS (SELECT 1 FROM inserted) AS is_new_unique,
+        (SELECT COUNT(*)::int FROM visitor_ips) AS unique_users
+    `,
+    [ipAddress]
+  );
+
+  const row = result.rows[0] || {};
+  return {
+    uniqueUsers: Number(row.unique_users) || 0,
+    isNewUnique: Boolean(row.is_new_unique)
+  };
+}
+
+async function readAnalytics() {
+  if (databaseUrl) {
+    return readDatabaseAnalytics();
+  }
+
+  return readFileAnalytics();
+}
+
+async function recordVisit(ipAddress) {
+  if (databaseUrl) {
+    return recordDatabaseVisit(ipAddress);
+  }
+
+  const analytics = readFileAnalytics();
+  const isNewUnique = Boolean(ipAddress) && !analytics.knownIps.includes(ipAddress);
+
+  if (isNewUnique) {
+    analytics.knownIps.push(ipAddress);
+    analytics.uniqueUsers = analytics.knownIps.length;
+    writeAnalytics(analytics);
+  }
+
+  return {
+    uniqueUsers: analytics.uniqueUsers,
+    isNewUnique
+  };
 }
 
 function getContentType(filePath) {
@@ -193,8 +337,12 @@ const server = http.createServer(async (req, res) => {
   const pathname = url.pathname;
 
   if (req.method === 'GET' && pathname === '/api/analytics') {
-    const analytics = readAnalytics();
-    sendJson(res, 200, { uniqueUsers: analytics.uniqueUsers });
+    try {
+      const analytics = await readAnalytics();
+      sendJson(res, 200, { uniqueUsers: analytics.uniqueUsers });
+    } catch (error) {
+      sendJson(res, 500, { error: 'Failed to read analytics.' });
+    }
     return;
   }
 
@@ -206,22 +354,20 @@ const server = http.createServer(async (req, res) => {
       return;
     }
 
-    const analytics = readAnalytics();
     const ipAddress = getClientIp(req);
-    const isNewUnique = Boolean(ipAddress) && !analytics.knownIps.includes(ipAddress);
 
-    if (isNewUnique) {
-      analytics.knownIps.push(ipAddress);
-      analytics.uniqueUsers = analytics.knownIps.length;
-      writeAnalytics(analytics);
+    try {
+      const visit = await recordVisit(ipAddress);
+
+      if (ipAddress) {
+        const country = await lookupCountry(ipAddress);
+        logVisitorVisit(ipAddress, visit.uniqueUsers, country, visit.isNewUnique);
+      }
+
+      sendJson(res, 200, { uniqueUsers: visit.uniqueUsers });
+    } catch (error) {
+      sendJson(res, 500, { error: 'Failed to record visit.' });
     }
-
-    if (ipAddress) {
-      const country = await lookupCountry(ipAddress);
-      logVisitorVisit(ipAddress, analytics.uniqueUsers, country, isNewUnique);
-    }
-
-    sendJson(res, 200, { uniqueUsers: analytics.uniqueUsers });
     return;
   }
 
@@ -233,9 +379,21 @@ const server = http.createServer(async (req, res) => {
   serveFile(req, res, pathname);
 });
 
-server.listen(port, () => {
+server.listen(port, async () => {
   console.log(`Server running on http://localhost:${port}`);
-  console.log(`Analytics storage path: ${analyticsPath}`);
+
+  if (databaseUrl) {
+    try {
+      await getDatabasePool();
+      console.log('Analytics storage: Neon/Postgres via DATABASE_URL');
+    } catch (error) {
+      console.error('Failed to connect to DATABASE_URL. Falling back is not available while DATABASE_URL is set.');
+      console.error(error);
+    }
+  } else {
+    console.log(`Analytics storage path: ${analyticsPath}`);
+  }
+
   if (!ipinfoToken) {
     console.log('IP geolocation logging is disabled. Set IPINFO_TOKEN to log visitor countries.');
   }
