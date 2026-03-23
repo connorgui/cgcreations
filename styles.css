@@ -723,10 +723,18 @@ textarea {
 }
 
 .egg-node .egg-bunny-decoy {
-  transform: translateX(-50%) translateY(14px) scale(0.8);
+  transform: translateX(-50%) translateY(16px) scale(0.85);
   color: #36589a;
-  font-size: 2rem;
   text-shadow: 0 0 8px rgba(54, 88, 154, 0.28);
+}
+
+.egg-node .egg-bunny-decoy::after {
+  content: "\2728";
+  position: absolute;
+  top: -0.2em;
+  right: -0.5em;
+  font-size: 0.58em;
+  line-height: 1;
 }
 
 .egg-node.is-peeking.has-real-bunny .egg-bunny-real,
@@ -803,10 +811,6 @@ textarea {
     font-size: 2rem;
   }
 
-  .egg-node .egg-bunny-decoy {
-    font-size: 1.65rem;
-  }
-
   .egg-pattern {
     width: 38px;
     height: 52px;
@@ -819,3 +823,4 @@ textarea {
 .egg-node.has-decoy-bunny.is-loser .egg-bunny-real {
   opacity: 0;
 }
+

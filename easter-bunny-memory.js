@@ -80,7 +80,7 @@ const FREQUENCIES = {
 
 const ICONS = {
   realBunny: String.fromCodePoint(0x1F430),
-  decoyBunny: `${String.fromCodePoint(0x1F430)}*`,
+  decoyBunny: String.fromCodePoint(0x1F430),
   egg: String.fromCodePoint(0x1F95A),
   carrot: String.fromCodePoint(0x1F955),
   sparkles: String.fromCodePoint(0x2728)
@@ -812,3 +812,5 @@ resetButtonEl.addEventListener("click", resetGame);
 updateLevelButtons();
 updateStats();
 refreshRuleSummary();
+
+
