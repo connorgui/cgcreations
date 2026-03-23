@@ -497,3 +497,325 @@ textarea {
   background: #d9c7ac;
   color: var(--ink);
 }
+.bunny-icon {
+  background: linear-gradient(135deg, #ffd7e0 0%, #f6a7b9 100%);
+  color: #7a3750;
+  box-shadow: 0 16px 30px rgba(170, 96, 120, 0.22);
+}
+
+.game-panel-wide {
+  width: min(1040px, 100%);
+}
+
+.bunny-custom {
+  grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+}
+
+.inline-check {
+  display: flex;
+  align-items: center;
+  gap: 10px;
+  font-weight: 600;
+}
+
+.inline-check input {
+  width: auto;
+}
+
+.bunny-stage-panel {
+  margin-top: 18px;
+  padding: 18px 20px 24px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(206, 173, 144, 0.8);
+  box-shadow: var(--card-shadow);
+}
+
+.bunny-stage-head {
+  margin-bottom: 14px;
+}
+
+.bunny-stage {
+  position: relative;
+  min-height: 380px;
+  overflow: hidden;
+  border-radius: 24px;
+  border: 1px solid rgba(185, 161, 142, 0.35);
+  background:
+    radial-gradient(circle at top, rgba(255, 253, 247, 0.92), rgba(255, 247, 236, 0.96) 50%, rgba(246, 233, 214, 0.98) 100%),
+    linear-gradient(180deg, rgba(255, 255, 255, 0.9), rgba(245, 233, 213, 0.8));
+}
+
+.bunny-stage::after {
+  content: "";
+  position: absolute;
+  inset: auto 0 0;
+  height: 30%;
+  background: linear-gradient(180deg, rgba(174, 221, 153, 0) 0%, rgba(154, 204, 132, 0.68) 100%);
+}
+
+.egg-node {
+  position: absolute;
+  width: 108px;
+  height: 124px;
+  padding: 0;
+  border: 0;
+  background: transparent;
+  transform: translate(-50%, -50%);
+  transition: left 360ms ease, top 360ms ease;
+  z-index: 2;
+}
+
+.egg-node:disabled {
+  opacity: 1;
+}
+
+.egg-node .egg-shadow {
+  position: absolute;
+  left: 50%;
+  bottom: 8px;
+  width: 62px;
+  height: 16px;
+  border-radius: 999px;
+  transform: translateX(-50%);
+  background: rgba(112, 81, 44, 0.16);
+  filter: blur(3px);
+}
+
+.egg-node .egg-visual,
+.egg-node .egg-bunny {
+  position: absolute;
+  left: 50%;
+  transform: translateX(-50%);
+}
+
+.egg-node .egg-visual {
+  bottom: 10px;
+  font-size: 4.8rem;
+  line-height: 1;
+  transform-origin: center bottom;
+  transition: transform 260ms ease, opacity 180ms ease, filter 180ms ease;
+}
+
+.egg-node .egg-bunny {
+  bottom: 56px;
+  font-size: 2.5rem;
+  line-height: 1;
+  opacity: 0;
+  transform: translateX(-50%) translateY(16px) scale(0.85);
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.egg-node.is-peeking .egg-bunny,
+.egg-node.is-winner .egg-bunny,
+.egg-node.is-hop-out .egg-bunny {
+  opacity: 1;
+}
+
+.egg-node.is-peeking .egg-bunny,
+.egg-node.is-winner .egg-bunny {
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.egg-node.is-hop-out .egg-bunny {
+  transform: translateX(-20%) translateY(-140px) scale(0.95) rotate(-8deg);
+}
+
+.egg-node.is-spinning .egg-visual {
+  animation: egg-spin 420ms linear 1;
+}
+
+.egg-node.is-hidden-trick .egg-visual,
+.egg-node.is-hidden-trick .egg-shadow,
+.egg-node.is-hidden-trick .egg-bunny {
+  opacity: 0.08;
+}
+
+.egg-node.is-loser .egg-visual {
+  filter: drop-shadow(0 0 18px rgba(214, 51, 60, 0.2));
+  transform: translateX(-50%) scale(0.92);
+}
+
+.egg-node.is-winner .egg-visual {
+  filter: drop-shadow(0 0 18px rgba(47, 158, 68, 0.26));
+  transform: translateX(-50%) scale(1.06);
+}
+
+.stage-flash {
+  animation: stage-flash 180ms ease;
+}
+
+.stage-zoom {
+  animation: stage-zoom 220ms ease;
+}
+
+.stage-distraction {
+  position: absolute;
+  z-index: 3;
+  font-size: 2rem;
+  opacity: 0;
+  animation: stage-float 900ms ease forwards;
+  pointer-events: none;
+}
+
+@keyframes egg-spin {
+  0% { transform: translateX(-50%) rotate(0deg) scale(1); }
+  50% { transform: translateX(-50%) rotate(180deg) scale(1.08); }
+  100% { transform: translateX(-50%) rotate(360deg) scale(1); }
+}
+
+@keyframes stage-flash {
+  0% { box-shadow: inset 0 0 0 0 rgba(255, 244, 170, 0.85); }
+  100% { box-shadow: inset 0 0 0 18px rgba(255, 244, 170, 0); }
+}
+
+@keyframes stage-zoom {
+  0% { transform: scale(1); }
+  50% { transform: scale(1.03); }
+  100% { transform: scale(1); }
+}
+
+@keyframes stage-float {
+  0% { opacity: 0; transform: translate(-50%, 24px) scale(0.65); }
+  20% { opacity: 1; }
+  100% { opacity: 0; transform: translate(-50%, -46px) scale(1.15); }
+}
+
+@media (max-width: 640px) {
+  .game-panel-wide {
+    width: 100%;
+  }
+
+  .bunny-stage {
+    min-height: 320px;
+  }
+
+  .egg-node {
+    width: 82px;
+    height: 102px;
+  }
+
+  .egg-node .egg-visual {
+    font-size: 3.7rem;
+  }
+
+  .egg-node .egg-bunny {
+    bottom: 44px;
+    font-size: 2rem;
+  }
+}
+.legend-gap {
+  display: inline-block;
+  width: 18px;
+}
+
+.egg-node .egg-bunny-real,
+.egg-node .egg-bunny-decoy {
+  bottom: 56px;
+  font-size: 2.5rem;
+  line-height: 1;
+  opacity: 0;
+  transition: transform 180ms ease, opacity 180ms ease;
+}
+
+.egg-node .egg-bunny-real {
+  transform: translateX(-50%) translateY(16px) scale(0.85);
+}
+
+.egg-node .egg-bunny-decoy {
+  transform: translateX(-50%) translateY(14px) scale(0.8);
+  color: #36589a;
+  font-size: 2rem;
+  text-shadow: 0 0 8px rgba(54, 88, 154, 0.28);
+}
+
+.egg-node.is-peeking.has-real-bunny .egg-bunny-real,
+.egg-node.is-winner.has-real-bunny .egg-bunny-real,
+.egg-node.is-hop-out.has-real-bunny .egg-bunny-real {
+  opacity: 1;
+}
+
+.egg-node.is-decoy-peeking.has-decoy-bunny .egg-bunny-decoy,
+.egg-node.has-decoy-bunny.is-loser .egg-bunny-decoy {
+  opacity: 1;
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.egg-node.is-peeking.has-real-bunny .egg-bunny-real,
+.egg-node.is-winner.has-real-bunny .egg-bunny-real {
+  transform: translateX(-50%) translateY(0) scale(1);
+}
+
+.egg-node.is-hop-out.has-real-bunny .egg-bunny-real {
+  transform: translateX(-20%) translateY(-140px) scale(0.95) rotate(-8deg);
+}
+
+.egg-pattern {
+  position: absolute;
+  left: 50%;
+  top: 56%;
+  width: 50px;
+  height: 66px;
+  border-radius: 45% 45% 48% 48%;
+  transform: translate(-50%, -50%);
+  opacity: calc(0.92 - (var(--camouflage-progress, 0) * 0.84));
+  pointer-events: none;
+  mix-blend-mode: multiply;
+  transition: opacity 180ms ease;
+}
+
+.pattern-0 { background: repeating-linear-gradient(135deg, rgba(214, 128, 144, 0.5), rgba(214, 128, 144, 0.5) 7px, rgba(255,255,255,0) 7px, rgba(255,255,255,0) 14px); }
+.pattern-1 { background: radial-gradient(circle at 30% 30%, rgba(111, 143, 46, 0.45) 0 7px, transparent 8px), radial-gradient(circle at 70% 60%, rgba(111, 143, 46, 0.45) 0 7px, transparent 8px); }
+.pattern-2 { background: repeating-linear-gradient(0deg, rgba(73, 110, 181, 0.35), rgba(73, 110, 181, 0.35) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px); }
+.pattern-3 { background: repeating-linear-gradient(90deg, rgba(216, 161, 74, 0.38), rgba(216, 161, 74, 0.38) 6px, rgba(255,255,255,0) 6px, rgba(255,255,255,0) 12px); }
+.pattern-4 { background: radial-gradient(circle at 50% 25%, rgba(148, 91, 169, 0.36) 0 8px, transparent 9px), radial-gradient(circle at 40% 68%, rgba(148, 91, 169, 0.36) 0 6px, transparent 7px), radial-gradient(circle at 68% 58%, rgba(148, 91, 169, 0.36) 0 6px, transparent 7px); }
+.pattern-5 { background: repeating-linear-gradient(45deg, rgba(71, 150, 132, 0.36), rgba(71, 150, 132, 0.36) 5px, rgba(255,255,255,0) 5px, rgba(255,255,255,0) 11px); }
+
+.stage-camouflage .egg-visual {
+  filter: saturate(calc(1 - (var(--camouflage-progress, 0) * 0.38)));
+}
+
+.egg-node.is-selected-guess .egg-visual {
+  filter: drop-shadow(0 0 12px rgba(184, 92, 56, 0.22));
+  transform: translateX(-50%) scale(1.05);
+}
+
+.egg-node.is-selected-guess::after {
+  content: "Pick";
+  position: absolute;
+  top: -10px;
+  left: 50%;
+  transform: translateX(-50%);
+  padding: 3px 9px;
+  border-radius: 999px;
+  font-size: 0.72rem;
+  font-weight: 700;
+  letter-spacing: 0.08em;
+  text-transform: uppercase;
+  background: rgba(184, 92, 56, 0.94);
+  color: #fffaf4;
+}
+
+@media (max-width: 640px) {
+  .egg-node .egg-bunny-real,
+  .egg-node .egg-bunny-decoy {
+    bottom: 44px;
+    font-size: 2rem;
+  }
+
+  .egg-node .egg-bunny-decoy {
+    font-size: 1.65rem;
+  }
+
+  .egg-pattern {
+    width: 38px;
+    height: 52px;
+  }
+}
+.egg-node.is-peeking.has-real-bunny .egg-bunny-decoy,
+.egg-node.is-winner.has-real-bunny .egg-bunny-decoy,
+.egg-node.is-hop-out.has-real-bunny .egg-bunny-decoy,
+.egg-node.is-decoy-peeking.has-decoy-bunny .egg-bunny-real,
+.egg-node.has-decoy-bunny.is-loser .egg-bunny-real {
+  opacity: 0;
+}

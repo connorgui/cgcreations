@@ -1,0 +1,196 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Easter Egg Bunny Memory Game</title>
+  <link rel="stylesheet" href="/styles.css?v=20260321b">
+</head>
+<body>
+  <main class="app">
+    <section class="panel game-panel-wide">
+      <a class="back-link" href="/index.html">Back to Creations</a>
+      <p class="eyebrow">Spring Memory Challenge</p>
+      <h1>Easter Egg Bunny Hiding Game</h1>
+      <p class="intro">
+        Watch where the real bunny hides, follow the eggs as they shuffle, and pick the right egg at the end.
+        Preset levels add more speed and tricks, and Custom lets you build your own chaos.
+      </p>
+
+      <div class="stats">
+        <article class="stat-card">
+          <span class="stat-label">Wins</span>
+          <strong id="bunny-wins">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Misses</span>
+          <strong id="bunny-losses">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Streak</span>
+          <strong id="bunny-streak">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Rounds</span>
+          <strong id="bunny-rounds">0</strong>
+        </article>
+      </div>
+
+      <section class="prime-config" aria-label="Game difficulty selection">
+        <div class="section-head section-head-stack">
+          <h2>Pick a Difficulty</h2>
+          <p class="support-text">Normal is selected by default.</p>
+        </div>
+        <div class="level-grid" role="radiogroup" aria-label="Bunny game difficulty">
+          <button class="level-pill" type="button" data-bunny-level="easy">Easy<br><span>3 eggs</span></button>
+          <button class="level-pill is-selected" type="button" data-bunny-level="normal">Normal<br><span>4 eggs</span></button>
+          <button class="level-pill" type="button" data-bunny-level="hard">Hard<br><span>6 eggs</span></button>
+          <button class="level-pill" type="button" data-bunny-level="impossible">Impossible<br><span>8 eggs</span></button>
+          <button class="level-pill" type="button" data-bunny-level="custom">Custom<br><span>Your rules</span></button>
+        </div>
+
+        <div id="bunny-custom-wrap" class="custom-range bunny-custom hidden">
+          <label class="form-field" for="bunny-custom-eggs">
+            Number of Eggs
+            <input id="bunny-custom-eggs" type="number" min="3" max="12" value="5">
+          </label>
+          <label class="form-field" for="bunny-custom-real-count">
+            Real Bunny Count
+            <input id="bunny-custom-real-count" type="number" min="1" max="8" value="1">
+          </label>
+          <label class="form-field" for="bunny-custom-speed">
+            Speed
+            <select id="bunny-custom-speed">
+              <option value="slow">Slow</option>
+              <option value="normal" selected>Regular</option>
+              <option value="fast">Fast</option>
+              <option value="very-fast">Very Fast</option>
+            </select>
+          </label>
+          <label class="form-field" for="bunny-custom-shuffles">
+            Shuffle Count
+            <input id="bunny-custom-shuffles" type="number" min="4" max="30" value="10">
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-pop-enabled">
+            <input id="bunny-custom-pop-enabled" type="checkbox">
+            Bunny randomly pops out
+          </label>
+          <label class="form-field" for="bunny-custom-pop-duration">
+            Pop-out time (ms)
+            <input id="bunny-custom-pop-duration" type="number" min="150" max="2000" value="700">
+          </label>
+          <label class="form-field" for="bunny-custom-pop-frequency">
+            Pop-out frequency
+            <select id="bunny-custom-pop-frequency">
+              <option value="rare">Rare</option>
+              <option value="sometimes" selected>Sometimes</option>
+              <option value="often">Often</option>
+            </select>
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-hop-enabled">
+            <input id="bunny-custom-hop-enabled" type="checkbox">
+            Bunny randomly hops out of frame
+          </label>
+          <label class="form-field" for="bunny-custom-hop-duration">
+            Hop-out time (ms)
+            <input id="bunny-custom-hop-duration" type="number" min="150" max="2500" value="650">
+          </label>
+          <label class="form-field" for="bunny-custom-hop-frequency">
+            Hop-out frequency
+            <select id="bunny-custom-hop-frequency">
+              <option value="rare" selected>Rare</option>
+              <option value="sometimes">Sometimes</option>
+              <option value="often">Often</option>
+            </select>
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-decoy-enabled">
+            <input id="bunny-custom-decoy-enabled" type="checkbox">
+            Decoy bunny
+          </label>
+          <label class="form-field" for="bunny-custom-decoy-count">
+            Decoy Count
+            <input id="bunny-custom-decoy-count" type="number" min="1" max="4" value="1">
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-camouflage">
+            <input id="bunny-custom-camouflage" type="checkbox">
+            Egg camouflage
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-spin">
+            <input id="bunny-custom-spin" type="checkbox" checked>
+            Spinning trick
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-flash">
+            <input id="bunny-custom-flash" type="checkbox">
+            Flashing trick
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-disappear">
+            <input id="bunny-custom-disappear" type="checkbox">
+            Disappearing trick
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-zoom">
+            <input id="bunny-custom-zoom" type="checkbox">
+            Zoom trick
+          </label>
+          <label class="form-field inline-check" for="bunny-custom-distractions">
+            <input id="bunny-custom-distractions" type="checkbox">
+            Distractions
+          </label>
+        </div>
+      </section>
+
+      <div class="spoken-wrap">
+        <span class="spoken-label">Current Rules</span>
+        <p id="bunny-rule-summary" class="sequence-display">Normal: 4 eggs, regular speed, spinning + camouflage.</p>
+      </div>
+
+      <section class="bunny-legend info">
+        <h2>Legend</h2>
+        <p class="support-text">
+          Real bunny: <strong>&#128007;</strong>
+          <span class="legend-gap"></span>
+          Decoy bunny: <strong>&#128007;*</strong>
+          <span class="legend-gap"></span>
+          Only the real bunny counts.
+        </p>
+      </section>
+
+      <section class="bunny-stage-panel">
+        <div class="bunny-stage-head">
+          <div>
+            <span class="spoken-label">Game Board</span>
+            <p class="support-text">Tap Start Round, watch closely, then choose the egg or eggs that hide the real bunny.</p>
+          </div>
+        </div>
+        <div id="bunny-stage" class="bunny-stage" aria-live="polite"></div>
+      </section>
+
+      <div class="status-wrap">
+        <div id="bunny-signal-light" class="signal signal-idle" aria-live="polite"></div>
+        <div class="status-copy">
+          <p class="status-label">Last Result</p>
+          <p id="bunny-status-text" class="status-text">Pick a level and press Start Round.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="bunny-start-button" type="button">Start Round</button>
+        <button id="bunny-reset-button" type="button" class="secondary">Reset Score</button>
+      </div>
+
+      <section class="info">
+        <h2>Preset Notes</h2>
+        <p class="support-text">
+          Easy lets the bunny peek for a full second. Normal adds camouflage and a faster peek. Hard adds one decoy bunny.
+          Impossible increases speed, trick intensity, and decoy pressure.
+        </p>
+      </section>
+    </section>
+  </main>
+
+  <script src="/easter-bunny-memory.js?v=20260321b"></script>
+  <script src="/analytics.js?v=20260307a"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>
