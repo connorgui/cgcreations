@@ -387,8 +387,9 @@ server.listen(port, async () => {
       await getDatabasePool();
       console.log('Analytics storage: Neon/Postgres via DATABASE_URL');
     } catch (error) {
-      console.error('Failed to connect to DATABASE_URL. Falling back is not available while DATABASE_URL is set.');
+      console.error('Failed to connect to DATABASE_URL. The service will exit so Render shows the startup failure clearly.');
       console.error(error);
+      process.exit(1);
     }
   } else {
     console.log(`Analytics storage path: ${analyticsPath}`);
