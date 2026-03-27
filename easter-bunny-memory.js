@@ -280,7 +280,7 @@ function describeConfig(config) {
   if (config.tricks.camouflage) { tricks.push("camouflage"); }
 
   parts.push(tricks.length ? `tricks: ${tricks.join(", ")}` : "no fancy tricks");
-  return parts.join(" • ");
+  return parts.join(` ${String.fromCodePoint(0x1F95A)} `);
 }
 
 function refreshRuleSummary() {
@@ -812,5 +812,6 @@ resetButtonEl.addEventListener("click", resetGame);
 updateLevelButtons();
 updateStats();
 refreshRuleSummary();
+
 
 
