@@ -424,6 +424,12 @@ textarea {
   box-shadow: 0 16px 30px rgba(47, 107, 63, 0.24);
 }
 
+.number-info-icon {
+  background: linear-gradient(135deg, #6a86c7 0%, #2f4f8c 100%);
+  color: #eef4ff;
+  box-shadow: 0 16px 30px rgba(47, 79, 140, 0.24);
+}
+
 .prime-config,
 .prime-question {
   margin-top: 18px;
@@ -496,6 +502,35 @@ textarea {
 .answer-button.secondary {
   background: #d9c7ac;
   color: var(--ink);
+}
+
+.number-info-controls {
+  display: grid;
+  grid-template-columns: minmax(0, 1fr) auto;
+  gap: 16px;
+  align-items: end;
+}
+
+.number-info-stats {
+  margin-top: 18px;
+}
+
+.number-info-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+}
+
+.number-info-panel {
+  padding: 18px 20px;
+  border-radius: 22px;
+  background: rgba(255, 255, 255, 0.82);
+  border: 1px solid rgba(206, 173, 144, 0.72);
+  box-shadow: var(--card-shadow);
+}
+
+.number-info-panel .sequence-display {
+  margin-top: 10px;
 }
 .bunny-icon {
   background: linear-gradient(135deg, #ffd7e0 0%, #f6a7b9 100%);
@@ -684,6 +719,10 @@ textarea {
 @media (max-width: 640px) {
   .game-panel-wide {
     width: 100%;
+  }
+
+  .number-info-controls {
+    grid-template-columns: 1fr;
   }
 
   .bunny-stage {

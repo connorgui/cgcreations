@@ -1,0 +1,97 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Number Information</title>
+  <link rel="stylesheet" href="/styles.css?v=20260330a">
+</head>
+<body>
+  <main class="app">
+    <section class="panel">
+      <a class="back-link" href="/index.html">Back to Creations</a>
+      <p class="eyebrow">Number Facts</p>
+      <h1>Number Information</h1>
+      <p class="intro">
+        Enter a whole number to see whether it is prime, what factors it has, and a few other quick facts.
+      </p>
+
+      <section class="prime-config" aria-label="Number input">
+        <div class="section-head section-head-stack">
+          <h2>Pick a Number</h2>
+          <p class="support-text">This tool works best with whole numbers from 0 to 10,000,000.</p>
+        </div>
+
+        <div class="number-info-controls">
+          <label class="form-field" for="number-info-input">
+            Whole Number
+            <input id="number-info-input" type="number" inputmode="numeric" min="0" step="1" value="97">
+          </label>
+          <button id="number-info-check-button" type="button">Show Info</button>
+        </div>
+      </section>
+
+      <div class="spoken-wrap">
+        <span class="spoken-label">Current Number</span>
+        <strong id="number-info-current" class="prime-number-display">97</strong>
+      </div>
+
+      <div class="stats number-info-stats">
+        <article class="stat-card">
+          <span class="stat-label">Type</span>
+          <strong id="number-info-type">Prime</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Even / Odd</span>
+          <strong id="number-info-parity">Odd</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Factor Count</span>
+          <strong id="number-info-factor-count">2</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Prime Factors</span>
+          <strong id="number-info-prime-factors">97</strong>
+        </article>
+      </div>
+
+      <section class="info number-info-grid">
+        <article class="number-info-panel">
+          <span class="spoken-label">All Factors</span>
+          <p id="number-info-factors" class="sequence-display">1, 97</p>
+        </article>
+        <article class="number-info-panel">
+          <span class="spoken-label">Factor Pairs</span>
+          <p id="number-info-factor-pairs" class="sequence-display">1 x 97</p>
+        </article>
+        <article class="number-info-panel">
+          <span class="spoken-label">Extra Facts</span>
+          <p id="number-info-extra" class="sequence-display">Digit sum: 16. Square: 9409. Cube: 912673.</p>
+        </article>
+      </section>
+
+      <div class="status-wrap">
+        <div id="number-info-signal-light" class="signal signal-idle" aria-live="polite"></div>
+        <div class="status-copy">
+          <p class="status-label">Status</p>
+          <p id="number-info-status-text" class="status-text">Enter a whole number and press Show Info.</p>
+        </div>
+      </div>
+
+      <section class="info">
+        <h2>What It Shows</h2>
+        <p class="support-text">
+          The tool checks whether the number is prime, lists its factors, shows its prime factorization,
+          and adds simple facts like parity, digit sum, square, and cube.
+        </p>
+      </section>
+    </section>
+  </main>
+
+  <script src="/number-info.js?v=20260330a"></script>
+  <script src="/analytics.js?v=20260307a"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>
