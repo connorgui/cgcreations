@@ -87,6 +87,7 @@ function updateScoreboard() {
   wrongCountEl.textContent = String(wrongCount);
   nextPositionEl.textContent = String(correctCount + 1);
   correctSequenceEl.textContent = formatPiDigits(PI_DIGITS.slice(0, correctCount));
+  window.scoreTracker?.notifyScore();
 }
 
 function incrementWrongCount() {
@@ -466,6 +467,17 @@ window.piVoiceAppTestApi = {
     totalPiDigits: PI_DIGITS.length,
     listening,
     isMobile
+  })
+};
+
+window.gameScoreApi = {
+  getScoreSnapshot: () => ({
+    correctCount,
+    wrongCount,
+    nextPosition: correctCount + 1,
+    correctSequence: PI_DIGITS.slice(0, correctCount),
+    listening,
+    updatedAt: new Date().toISOString()
   })
 };
 

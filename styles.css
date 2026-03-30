@@ -50,6 +50,105 @@ body {
   width: min(1040px, 100%);
 }
 
+.site-auth-shell {
+  position: fixed;
+  inset: 0;
+  pointer-events: none;
+  z-index: 30;
+}
+
+.site-auth-topbar {
+  position: absolute;
+  top: 18px;
+  right: 18px;
+  pointer-events: auto;
+}
+
+.site-auth-button {
+  min-width: 128px;
+  background: rgba(31, 41, 51, 0.94);
+  color: #fffaf4;
+  box-shadow: 0 12px 24px rgba(31, 41, 51, 0.18);
+}
+
+.site-auth-button:hover {
+  background: #10161d;
+}
+
+.site-auth-modal {
+  position: absolute;
+  inset: 0;
+  display: grid;
+  place-items: center;
+  pointer-events: auto;
+}
+
+.site-auth-backdrop {
+  position: absolute;
+  inset: 0;
+  background: rgba(21, 25, 31, 0.4);
+  backdrop-filter: blur(3px);
+}
+
+.site-auth-card {
+  position: relative;
+  z-index: 1;
+  width: min(460px, calc(100vw - 32px));
+  padding: 26px;
+  border-radius: 28px;
+  background: rgba(255, 250, 240, 0.98);
+  border: 1px solid rgba(31, 41, 51, 0.08);
+  box-shadow: 0 28px 60px rgba(31, 41, 51, 0.2);
+}
+
+.site-auth-close {
+  position: absolute;
+  top: 14px;
+  right: 14px;
+  min-width: 0;
+  width: 42px;
+  height: 42px;
+  padding: 0;
+  border-radius: 999px;
+  background: rgba(217, 199, 172, 0.9);
+  color: var(--ink);
+}
+
+.site-auth-actions {
+  margin-top: 18px;
+}
+
+.site-auth-checkbox {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  margin-top: 16px;
+  color: var(--ink);
+  font-weight: 600;
+}
+
+.site-auth-checkbox input {
+  width: auto;
+}
+
+.site-auth-mode-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin: 16px 0;
+}
+
+.site-auth-mode-row .is-selected {
+  background: var(--accent-dark);
+  color: #fffaf4;
+}
+
+.site-auth-error {
+  min-height: 1.4em;
+  margin: 12px 0 0;
+  color: var(--error);
+}
+
 .home-header {
   text-align: center;
   margin-bottom: 28px;
@@ -371,6 +470,10 @@ button.secondary {
   color: var(--ink);
 }
 
+button.is-tracking {
+  background: #2f6b3f;
+}
+
 button:disabled {
   cursor: not-allowed;
   opacity: 0.6;
@@ -401,6 +504,16 @@ textarea {
 @media (max-width: 640px) {
   .panel {
     padding: 24px;
+  }
+
+  .site-auth-topbar {
+    top: 12px;
+    right: 12px;
+  }
+
+  .site-auth-button {
+    min-width: 106px;
+    padding: 12px 16px;
   }
 
   .status-wrap {

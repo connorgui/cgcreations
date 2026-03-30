@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Easter Egg Bunny Memory Game</title>
-  <link rel="stylesheet" href="/styles.css?v=20260321b">
+  <link rel="stylesheet" href="/styles.css?v=20260330b">
 </head>
-<body>
+<body data-game-key="easter-bunny-memory" data-game-label="Easter Bunny Memory">
   <main class="app">
     <section class="panel game-panel-wide">
       <a class="back-link" href="/index.html">Back to Creations</a>
@@ -175,6 +175,7 @@
       <div class="actions">
         <button id="bunny-start-button" type="button">Start Round</button>
         <button id="bunny-reset-button" type="button" class="secondary">Reset Score</button>
+        <button type="button" class="secondary" data-track-score="true">Track your score</button>
       </div>
 
       <section class="info">
@@ -187,8 +188,9 @@
     </section>
   </main>
 
-  <script src="/easter-bunny-memory.js?v=20260327a"></script>
+  <script src="/easter-bunny-memory.js?v=20260330a"></script>
   <script src="/analytics.js?v=20260307a"></script>
+  <script src="/auth-ui.js?v=20260330a"></script>
   <script>
     window.siteAnalytics.init();
   </script>

@@ -150,6 +150,7 @@ function updateStats() {
   lossesEl.textContent = String(losses);
   streakEl.textContent = String(streak);
   roundsEl.textContent = String(rounds);
+  window.scoreTracker?.notifyScore();
 }
 
 function cloneConfig(config) {
@@ -812,6 +813,18 @@ resetButtonEl.addEventListener("click", resetGame);
 updateLevelButtons();
 updateStats();
 refreshRuleSummary();
+
+window.gameScoreApi = {
+  getScoreSnapshot: () => ({
+    wins,
+    losses,
+    streak,
+    rounds,
+    selectedLevel,
+    activeConfig: activeConfig ? { ...activeConfig, tricks: { ...activeConfig.tricks } } : null,
+    updatedAt: new Date().toISOString()
+  })
+};
 
 
 

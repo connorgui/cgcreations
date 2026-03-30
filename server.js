@@ -1,4 +1,5 @@
 const http = require('http');
+const crypto = require('crypto');
 const fs = require('fs');
 const path = require('path');
 const { URL } = require('url');
@@ -11,6 +12,8 @@ const analyticsPath = process.env.ANALYTICS_PATH
 const databaseUrl = process.env.DATABASE_URL || '';
 const ipinfoToken = process.env.IPINFO_TOKEN || '';
 const port = Number(process.env.PORT || 8080);
+const sessionCookieName = 'cg_session';
+const sessionDurationMs = 1000 * 60 * 60 * 24 * 30;
 
 let databasePool = null;
 let databaseSetupPromise = null;
@@ -140,6 +143,37 @@ async function initializeDatabase(pool) {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS app_users (
+      id BIGSERIAL PRIMARY KEY,
+      username TEXT NOT NULL UNIQUE,
+      password_salt TEXT NOT NULL,
+      password_hash TEXT NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_sessions (
+      token TEXT PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS user_game_scores (
+      user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      game_key TEXT NOT NULL,
+      score_data JSONB NOT NULL DEFAULT '{}'::jsonb,
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      PRIMARY KEY (user_id, game_key)
+    )
+  `);
+
+  await pool.query(`DELETE FROM user_sessions WHERE expires_at <= NOW()`);
+
   const existingCount = await countDatabaseVisitors(pool);
   if (existingCount > 0) {
     return;
@@ -233,6 +267,215 @@ async function recordVisit(ipAddress) {
   };
 }
 
+function ensureDatabaseEnabled() {
+  if (!databaseUrl) {
+    const error = new Error('Database storage is not configured.');
+    error.statusCode = 503;
+    throw error;
+  }
+}
+
+function parseCookies(req) {
+  const rawCookie = req.headers.cookie || '';
+  const parsed = {};
+
+  for (const chunk of rawCookie.split(';')) {
+    const [name, ...valueParts] = chunk.split('=');
+    if (!name) {
+      continue;
+    }
+
+    parsed[name.trim()] = decodeURIComponent(valueParts.join('=').trim());
+  }
+
+  return parsed;
+}
+
+function appendCookieHeader(res, cookieValue) {
+  const existing = res.getHeader('Set-Cookie');
+  if (!existing) {
+    res.setHeader('Set-Cookie', cookieValue);
+    return;
+  }
+
+  if (Array.isArray(existing)) {
+    res.setHeader('Set-Cookie', existing.concat(cookieValue));
+    return;
+  }
+
+  res.setHeader('Set-Cookie', [existing, cookieValue]);
+}
+
+function setSessionCookie(res, token) {
+  appendCookieHeader(
+    res,
+    `${sessionCookieName}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(sessionDurationMs / 1000)}`
+  );
+}
+
+function clearSessionCookie(res) {
+  appendCookieHeader(
+    res,
+    `${sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+  );
+}
+
+function normalizeUsername(username) {
+  return String(username || '').trim().toLowerCase();
+}
+
+function validateCredentials(username, password) {
+  const normalizedUsername = normalizeUsername(username);
+  if (!/^[a-z0-9_-]{3,24}$/.test(normalizedUsername)) {
+    const error = new Error('Username must be 3-24 characters using letters, numbers, dashes, or underscores.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (typeof password !== 'string' || password.length < 6 || password.length > 72) {
+    const error = new Error('Password must be between 6 and 72 characters.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return { normalizedUsername, password };
+}
+
+function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
+  const derivedKey = crypto.scryptSync(password, salt, 64).toString('hex');
+  return { salt, hash: derivedKey };
+}
+
+function safeTimingCompare(leftHex, rightHex) {
+  const left = Buffer.from(leftHex, 'hex');
+  const right = Buffer.from(rightHex, 'hex');
+  if (left.length !== right.length) {
+    return false;
+  }
+
+  return crypto.timingSafeEqual(left, right);
+}
+
+function createSessionToken() {
+  return `${crypto.randomUUID()}${crypto.randomBytes(24).toString('hex')}`;
+}
+
+function sanitizeGameKey(gameKey) {
+  const normalized = String(gameKey || '').trim().toLowerCase();
+  if (!/^[a-z0-9-]{2,40}$/.test(normalized)) {
+    const error = new Error('Invalid game key.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return normalized;
+}
+
+async function createUserAccount(username, password) {
+  ensureDatabaseEnabled();
+  const { normalizedUsername } = validateCredentials(username, password);
+  const pool = await getDatabasePool();
+  const { salt, hash } = hashPassword(password);
+
+  try {
+    const result = await pool.query(
+      `INSERT INTO app_users (username, password_salt, password_hash) VALUES ($1, $2, $3) RETURNING id, username`,
+      [normalizedUsername, salt, hash]
+    );
+    return result.rows[0];
+  } catch (error) {
+    if (error && error.code === '23505') {
+      const userError = new Error('That username is already taken.');
+      userError.statusCode = 409;
+      throw userError;
+    }
+    throw error;
+  }
+}
+
+async function findUserByUsername(username) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const normalizedUsername = normalizeUsername(username);
+  const result = await pool.query(
+    `SELECT id, username, password_salt, password_hash FROM app_users WHERE username = $1`,
+    [normalizedUsername]
+  );
+  return result.rows[0] || null;
+}
+
+async function createSessionForUser(userId) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const token = createSessionToken();
+  const expiresAt = new Date(Date.now() + sessionDurationMs);
+  await pool.query(
+    `INSERT INTO user_sessions (token, user_id, expires_at) VALUES ($1, $2, $3)`,
+    [token, userId, expiresAt]
+  );
+  return token;
+}
+
+async function getAuthenticatedUser(req) {
+  if (!databaseUrl) {
+    return null;
+  }
+
+  const cookies = parseCookies(req);
+  const token = cookies[sessionCookieName];
+  if (!token) {
+    return null;
+  }
+
+  const pool = await getDatabasePool();
+  const result = await pool.query(
+    `
+      SELECT app_users.id, app_users.username, user_sessions.token
+      FROM user_sessions
+      JOIN app_users ON app_users.id = user_sessions.user_id
+      WHERE user_sessions.token = $1 AND user_sessions.expires_at > NOW()
+    `,
+    [token]
+  );
+
+  return result.rows[0] || null;
+}
+
+async function deleteSessionToken(token) {
+  if (!databaseUrl || !token) {
+    return;
+  }
+
+  const pool = await getDatabasePool();
+  await pool.query(`DELETE FROM user_sessions WHERE token = $1`, [token]);
+}
+
+async function saveUserGameScore(userId, gameKey, scoreData) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const normalizedGameKey = sanitizeGameKey(gameKey);
+  await pool.query(
+    `
+      INSERT INTO user_game_scores (user_id, game_key, score_data, updated_at)
+      VALUES ($1, $2, $3::jsonb, NOW())
+      ON CONFLICT (user_id, game_key)
+      DO UPDATE SET score_data = EXCLUDED.score_data, updated_at = NOW()
+    `,
+    [userId, normalizedGameKey, JSON.stringify(scoreData || {})]
+  );
+}
+
+async function readUserGameScore(userId, gameKey) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const normalizedGameKey = sanitizeGameKey(gameKey);
+  const result = await pool.query(
+    `SELECT score_data, updated_at FROM user_game_scores WHERE user_id = $1 AND game_key = $2`,
+    [userId, normalizedGameKey]
+  );
+  return result.rows[0] || null;
+}
+
 function getContentType(filePath) {
   switch (path.extname(filePath).toLowerCase()) {
     case '.html':
@@ -248,17 +491,19 @@ function getContentType(filePath) {
   }
 }
 
-function sendJson(res, statusCode, data) {
+function sendJson(res, statusCode, data, extraHeaders = {}) {
   const body = JSON.stringify(data);
   res.writeHead(statusCode, {
+    ...extraHeaders,
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(body)
   });
   res.end(body);
 }
 
-function sendText(res, statusCode, body, contentType = 'text/plain; charset=utf-8') {
+function sendText(res, statusCode, body, contentType = 'text/plain; charset=utf-8', extraHeaders = {}) {
   res.writeHead(statusCode, {
+    ...extraHeaders,
     'Content-Type': contentType,
     'Content-Length': Buffer.byteLength(body)
   });
@@ -335,6 +580,115 @@ function readRequestBody(req) {
 const server = http.createServer(async (req, res) => {
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
+
+  if (req.method === 'GET' && pathname === '/api/auth/me') {
+    try {
+      const user = await getAuthenticatedUser(req);
+      sendJson(res, 200, {
+        signedIn: Boolean(user),
+        username: user ? user.username : null
+      });
+    } catch (error) {
+      sendJson(res, error.statusCode || 500, { error: error.message || 'Failed to read auth state.' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/auth/signup') {
+    try {
+      const body = await readRequestBody(req);
+      const parsed = JSON.parse(body || '{}');
+      const user = await createUserAccount(parsed.username, parsed.password);
+      const token = await createSessionForUser(user.id);
+      setSessionCookie(res, token);
+      sendJson(res, 201, { signedIn: true, username: user.username });
+    } catch (error) {
+      const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
+      sendJson(res, statusCode, { error: error.message || 'Failed to create account.' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/auth/signin') {
+    try {
+      const body = await readRequestBody(req);
+      const parsed = JSON.parse(body || '{}');
+      const { normalizedUsername, password } = validateCredentials(parsed.username, parsed.password);
+      const user = await findUserByUsername(normalizedUsername);
+
+      if (!user) {
+        sendJson(res, 401, { error: 'Username or password is incorrect.' });
+        return;
+      }
+
+      const hashedAttempt = hashPassword(password, user.password_salt);
+      if (!safeTimingCompare(hashedAttempt.hash, user.password_hash)) {
+        sendJson(res, 401, { error: 'Username or password is incorrect.' });
+        return;
+      }
+
+      const token = await createSessionForUser(user.id);
+      setSessionCookie(res, token);
+      sendJson(res, 200, { signedIn: true, username: user.username });
+    } catch (error) {
+      const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
+      sendJson(res, statusCode, { error: error.message || 'Failed to sign in.' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/auth/signout') {
+    try {
+      const cookies = parseCookies(req);
+      await deleteSessionToken(cookies[sessionCookieName]);
+      clearSessionCookie(res);
+      sendJson(res, 200, { signedIn: false });
+    } catch (error) {
+      sendJson(res, error.statusCode || 500, { error: error.message || 'Failed to sign out.' });
+    }
+    return;
+  }
+
+  if (pathname.startsWith('/api/game-score/')) {
+    const gameKey = pathname.slice('/api/game-score/'.length);
+
+    try {
+      const user = await getAuthenticatedUser(req);
+      if (!user) {
+        sendJson(res, 401, { error: 'Sign in required.' });
+        return;
+      }
+
+      if (req.method === 'GET') {
+        const score = await readUserGameScore(user.id, gameKey);
+        sendJson(res, 200, {
+          username: user.username,
+          gameKey: sanitizeGameKey(gameKey),
+          scoreData: score ? score.score_data : null,
+          updatedAt: score ? score.updated_at : null
+        });
+        return;
+      }
+
+      if (req.method === 'POST') {
+        const body = await readRequestBody(req);
+        const parsed = JSON.parse(body || '{}');
+        const scoreData = parsed && typeof parsed.scoreData === 'object' && parsed.scoreData !== null
+          ? parsed.scoreData
+          : {};
+        await saveUserGameScore(user.id, gameKey, scoreData);
+        sendJson(res, 200, { ok: true });
+        return;
+      }
+    } catch (error) {
+      const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
+      sendJson(res, statusCode, { error: error.message || 'Failed to handle game score.' });
+      return;
+    }
+
+    sendText(res, 405, 'Method Not Allowed');
+    return;
+  }
 
   if (req.method === 'GET' && pathname === '/api/analytics') {
     try {

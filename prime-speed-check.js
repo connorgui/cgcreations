@@ -82,6 +82,7 @@ function updateStats() {
   wrongCountEl.textContent = String(wrongCount);
   streakCountEl.textContent = String(streakCount);
   averageTimeEl.textContent = formatAverageTime();
+  window.scoreTracker?.notifyScore();
 }
 
 function updateRangeLabel() {
@@ -254,3 +255,17 @@ updateRangeLabel();
 updateStats();
 setAnswerButtonsDisabled(true);
 setStatus("Medium is ready by default. Press Start Round to begin.");
+
+window.gameScoreApi = {
+  getScoreSnapshot: () => ({
+    correctCount,
+    wrongCount,
+    streakCount,
+    answeredCount,
+    averageTimeMs: answeredCount ? Math.round(totalAnswerTime / answeredCount) : null,
+    currentRange,
+    currentNumber,
+    roundActive,
+    updatedAt: new Date().toISOString()
+  })
+};

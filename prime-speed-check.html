@@ -4,9 +4,9 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Prime Speed Check</title>
-  <link rel="stylesheet" href="/styles.css?v=20260309a">
+  <link rel="stylesheet" href="/styles.css?v=20260330b">
 </head>
-<body>
+<body data-game-key="prime-speed-check" data-game-label="Prime Speed Check">
   <main class="app">
     <section class="panel">
       <a class="back-link" href="/index.html">Back to Creations</a>
@@ -80,6 +80,7 @@
       <div class="actions">
         <button id="prime-start-button" type="button">Start Round</button>
         <button id="prime-reset-button" type="button" class="secondary">Reset Score</button>
+        <button type="button" class="secondary" data-track-score="true">Track your score</button>
       </div>
 
       <div class="answer-grid">
@@ -96,8 +97,9 @@
     </section>
   </main>
 
-  <script src="/prime-speed-check.js?v=20260309a"></script>
+  <script src="/prime-speed-check.js?v=20260330a"></script>
   <script src="/analytics.js?v=20260307a"></script>
+  <script src="/auth-ui.js?v=20260330a"></script>
   <script>
     window.siteAnalytics.init();
   </script>
