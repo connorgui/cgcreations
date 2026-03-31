@@ -149,8 +149,14 @@ async function initializeDatabase(pool) {
       username TEXT NOT NULL UNIQUE,
       password_salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
+      profile_data JSONB NOT NULL DEFAULT '{"avatarType":"initials","avatarValue":"","avatarColor":"#6a86c7"}'::jsonb,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS profile_data JSONB NOT NULL DEFAULT '{"avatarType":"initials","avatarValue":"","avatarColor":"#6a86c7"}'::jsonb
   `);
 
   await pool.query(`
@@ -341,6 +347,90 @@ function validateCredentials(username, password) {
   return { normalizedUsername, password };
 }
 
+function getDefaultProfileData(username = '') {
+  return {
+    avatarType: 'initials',
+    avatarValue: String(username || '').slice(0, 2).toUpperCase(),
+    avatarColor: '#6a86c7'
+  };
+}
+
+function sanitizeProfileData(input, username = '') {
+  const base = getDefaultProfileData(username);
+  const avatarType = String(input && input.avatarType ? input.avatarType : base.avatarType).trim().toLowerCase();
+  const avatarColor = String(input && input.avatarColor ? input.avatarColor : base.avatarColor).trim();
+  const avatarValue = String(input && input.avatarValue ? input.avatarValue : base.avatarValue).trim();
+
+  if (!/^#[0-9a-f]{6}$/i.test(avatarColor)) {
+    const error = new Error('Avatar color must be a 6-digit hex color.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!['initials', 'emoji', 'photo'].includes(avatarType)) {
+    const error = new Error('Avatar type must be initials, emoji, or photo.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (avatarType === 'initials') {
+    const normalizedInitials = avatarValue
+      .replace(/[^a-z0-9]/gi, '')
+      .slice(0, 2)
+      .toUpperCase() || base.avatarValue;
+
+    return {
+      avatarType,
+      avatarValue: normalizedInitials,
+      avatarColor
+    };
+  }
+
+  if (avatarType === 'emoji') {
+    if (!avatarValue || avatarValue.length > 8) {
+      const error = new Error('Please choose a valid emoji avatar.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    return {
+      avatarType,
+      avatarValue,
+      avatarColor
+    };
+  }
+
+  if (!avatarValue.startsWith('data:image/')) {
+    const error = new Error('Photo avatars must be uploaded as an image.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (avatarValue.length > 280000) {
+    const error = new Error('Photo avatar is too large. Choose a smaller image.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return {
+    avatarType,
+    avatarValue,
+    avatarColor
+  };
+}
+
+function buildPublicUser(row) {
+  if (!row) {
+    return null;
+  }
+
+  return {
+    id: row.id,
+    username: row.username,
+    profileData: sanitizeProfileData(row.profile_data || {}, row.username)
+  };
+}
+
 function hashPassword(password, salt = crypto.randomBytes(16).toString('hex')) {
   const derivedKey = crypto.scryptSync(password, salt, 64).toString('hex');
   return { salt, hash: derivedKey };
@@ -371,18 +461,19 @@ function sanitizeGameKey(gameKey) {
   return normalized;
 }
 
-async function createUserAccount(username, password) {
+async function createUserAccount(username, password, profileDataInput = {}) {
   ensureDatabaseEnabled();
   const { normalizedUsername } = validateCredentials(username, password);
   const pool = await getDatabasePool();
   const { salt, hash } = hashPassword(password);
+  const profileData = sanitizeProfileData(profileDataInput, normalizedUsername);
 
   try {
     const result = await pool.query(
-      `INSERT INTO app_users (username, password_salt, password_hash) VALUES ($1, $2, $3) RETURNING id, username`,
-      [normalizedUsername, salt, hash]
+      `INSERT INTO app_users (username, password_salt, password_hash, profile_data) VALUES ($1, $2, $3, $4::jsonb) RETURNING id, username, profile_data`,
+      [normalizedUsername, salt, hash, JSON.stringify(profileData)]
     );
-    return result.rows[0];
+    return buildPublicUser(result.rows[0]);
   } catch (error) {
     if (error && error.code === '23505') {
       const userError = new Error('That username is already taken.');
@@ -398,7 +489,7 @@ async function findUserByUsername(username) {
   const pool = await getDatabasePool();
   const normalizedUsername = normalizeUsername(username);
   const result = await pool.query(
-    `SELECT id, username, password_salt, password_hash FROM app_users WHERE username = $1`,
+    `SELECT id, username, password_salt, password_hash, profile_data FROM app_users WHERE username = $1`,
     [normalizedUsername]
   );
   return result.rows[0] || null;
@@ -430,7 +521,7 @@ async function getAuthenticatedUser(req) {
   const pool = await getDatabasePool();
   const result = await pool.query(
     `
-      SELECT app_users.id, app_users.username, user_sessions.token
+      SELECT app_users.id, app_users.username, app_users.profile_data, user_sessions.token
       FROM user_sessions
       JOIN app_users ON app_users.id = user_sessions.user_id
       WHERE user_sessions.token = $1 AND user_sessions.expires_at > NOW()
@@ -438,7 +529,7 @@ async function getAuthenticatedUser(req) {
     [token]
   );
 
-  return result.rows[0] || null;
+  return buildPublicUser(result.rows[0]);
 }
 
 async function deleteSessionToken(token) {
@@ -474,6 +565,17 @@ async function readUserGameScore(userId, gameKey) {
     [userId, normalizedGameKey]
   );
   return result.rows[0] || null;
+}
+
+async function updateUserProfile(userId, username, profileDataInput) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const profileData = sanitizeProfileData(profileDataInput, username);
+  const result = await pool.query(
+    `UPDATE app_users SET profile_data = $2::jsonb WHERE id = $1 RETURNING id, username, profile_data`,
+    [userId, JSON.stringify(profileData)]
+  );
+  return buildPublicUser(result.rows[0] || null);
 }
 
 function getContentType(filePath) {
@@ -586,7 +688,8 @@ const server = http.createServer(async (req, res) => {
       const user = await getAuthenticatedUser(req);
       sendJson(res, 200, {
         signedIn: Boolean(user),
-        username: user ? user.username : null
+        username: user ? user.username : null,
+        profileData: user ? user.profileData : null
       });
     } catch (error) {
       sendJson(res, error.statusCode || 500, { error: error.message || 'Failed to read auth state.' });
@@ -598,10 +701,10 @@ const server = http.createServer(async (req, res) => {
     try {
       const body = await readRequestBody(req);
       const parsed = JSON.parse(body || '{}');
-      const user = await createUserAccount(parsed.username, parsed.password);
+      const user = await createUserAccount(parsed.username, parsed.password, parsed.profileData || {});
       const token = await createSessionForUser(user.id);
       setSessionCookie(res, token);
-      sendJson(res, 201, { signedIn: true, username: user.username });
+      sendJson(res, 201, { signedIn: true, username: user.username, profileData: user.profileData });
     } catch (error) {
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
       sendJson(res, statusCode, { error: error.message || 'Failed to create account.' });
@@ -629,10 +732,33 @@ const server = http.createServer(async (req, res) => {
 
       const token = await createSessionForUser(user.id);
       setSessionCookie(res, token);
-      sendJson(res, 200, { signedIn: true, username: user.username });
+      sendJson(res, 200, { signedIn: true, username: user.username, profileData: sanitizeProfileData(user.profile_data || {}, user.username) });
     } catch (error) {
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
       sendJson(res, statusCode, { error: error.message || 'Failed to sign in.' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/auth/profile') {
+    try {
+      const user = await getAuthenticatedUser(req);
+      if (!user) {
+        sendJson(res, 401, { error: 'Sign in required.' });
+        return;
+      }
+
+      const body = await readRequestBody(req);
+      const parsed = JSON.parse(body || '{}');
+      const updatedUser = await updateUserProfile(user.id, user.username, parsed.profileData || {});
+      sendJson(res, 200, {
+        signedIn: true,
+        username: updatedUser.username,
+        profileData: updatedUser.profileData
+      });
+    } catch (error) {
+      const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
+      sendJson(res, statusCode, { error: error.message || 'Failed to update profile.' });
     }
     return;
   }
