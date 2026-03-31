@@ -247,10 +247,29 @@
             <input id="site-auth-settings-skip" type="checkbox">
             Skip the sign-in message before games
           </label>
+          <div id="site-auth-danger-zone" class="site-auth-danger-zone hidden">
+            <p class="spoken-label">Danger Zone</p>
+            <p class="support-text">Delete your account and remove your saved scores and homework from this site.</p>
+            <button id="site-auth-open-delete" type="button" class="secondary site-auth-danger-button">Delete Account</button>
+          </div>
           <p id="site-auth-settings-error" class="site-auth-error"></p>
           <div class="actions site-auth-actions">
             <button id="site-auth-settings-save" type="button">Save Changes</button>
             <button id="site-auth-settings-cancel" type="button" class="secondary">Cancel</button>
+          </div>
+        </section>
+        <section id="site-auth-delete-view" class="hidden">
+          <p class="eyebrow">Delete Account</p>
+          <h2>Delete your account?</h2>
+          <p class="support-text">This action cannot be undone. Your saved scores, homework, and profile for this site will be permanently removed.</p>
+          <label class="site-auth-field" for="site-auth-delete-confirmation">
+            Type DELETE to confirm
+            <input id="site-auth-delete-confirmation" type="text" placeholder="DELETE" autocomplete="off" spellcheck="false">
+          </label>
+          <p id="site-auth-delete-error" class="site-auth-error"></p>
+          <div class="actions site-auth-actions">
+            <button id="site-auth-delete-confirm" type="button" class="secondary site-auth-danger-button">Delete Account</button>
+            <button id="site-auth-delete-cancel" type="button" class="secondary">Cancel</button>
           </div>
         </section>
       </div>
@@ -262,6 +281,7 @@
   const promptView = document.getElementById("site-auth-prompt-view");
   const authView = document.getElementById("site-auth-auth-view");
   const settingsView = document.getElementById("site-auth-settings-view");
+  const deleteView = document.getElementById("site-auth-delete-view");
   const authButton = document.getElementById("site-auth-main-button");
   const authLabel = document.getElementById("site-auth-main-label");
   const authAvatar = document.getElementById("site-auth-main-avatar");
@@ -352,6 +372,7 @@
     promptView.classList.toggle("hidden", viewName !== "prompt");
     authView.classList.toggle("hidden", viewName !== "auth");
     settingsView.classList.toggle("hidden", viewName !== "settings");
+    deleteView.classList.toggle("hidden", viewName !== "delete");
     modal.hidden = false;
     accountMenu.classList.add("hidden");
   }
@@ -361,8 +382,11 @@
     promptView.classList.add("hidden");
     authView.classList.add("hidden");
     settingsView.classList.add("hidden");
+    deleteView.classList.add("hidden");
     clearAuthMessage();
     document.getElementById("site-auth-settings-error").textContent = "";
+    document.getElementById("site-auth-delete-error").textContent = "";
+    document.getElementById("site-auth-delete-confirmation").value = "";
   }
 
   function currentEditorProfile(prefix, username) {
@@ -550,15 +574,24 @@
   function openSettings(prefOnly) {
     document.getElementById("site-auth-settings-skip").checked = shouldSkipPrompt();
     const editorWrap = document.getElementById("site-auth-settings-editor-wrap");
+    const dangerZone = document.getElementById("site-auth-danger-zone");
     document.getElementById("site-auth-settings-heading").textContent = prefOnly ? "Reminder Settings" : "Account Settings";
     document.getElementById("site-auth-settings-copy").textContent = prefOnly
       ? "Choose whether the sign-in message appears before score-tracked games."
       : "Change your profile picture and whether the sign-in message appears.";
     editorWrap.classList.toggle("hidden", prefOnly);
+    dangerZone.classList.toggle("hidden", prefOnly || !authState.signedIn);
     if (!prefOnly) {
       populateEditor("settings", authState.profileData, authState.username);
     }
     showOnly("settings");
+  }
+
+  function openDeleteConfirm() {
+    document.getElementById("site-auth-delete-error").textContent = "";
+    document.getElementById("site-auth-delete-confirmation").value = "";
+    showOnly("delete");
+    document.getElementById("site-auth-delete-confirmation").focus();
   }
 
   function finishPendingAction() {
@@ -683,6 +716,39 @@
 
   document.getElementById("site-auth-settings-cancel").addEventListener("click", closeModal);
   document.getElementById("site-auth-account-settings").addEventListener("click", () => openSettings(false));
+  document.getElementById("site-auth-open-delete").addEventListener("click", openDeleteConfirm);
+  document.getElementById("site-auth-delete-cancel").addEventListener("click", () => openSettings(false));
+  document.getElementById("site-auth-delete-confirm").addEventListener("click", async () => {
+    const confirmation = document.getElementById("site-auth-delete-confirmation").value.trim();
+    const deleteError = document.getElementById("site-auth-delete-error");
+    deleteError.textContent = "";
+
+    if (confirmation !== "DELETE") {
+      deleteError.textContent = "Type DELETE in all caps to confirm account deletion.";
+      return;
+    }
+
+    try {
+      await fetchJson("/api/auth/delete-account", {
+        method: "POST",
+        body: JSON.stringify({ confirmation })
+      });
+      authState.signedIn = false;
+      authState.username = null;
+      authState.profileData = null;
+      uiState.trackingEnabled = false;
+      setSkipPrompt(window.localStorage.getItem(skipPromptKey) === "true");
+      setAuthButton();
+      emitAuthChange();
+      accountMenu.classList.add("hidden");
+      trackButtons.forEach((button) => {
+        button.textContent = "Track your score";
+      });
+      closeModal();
+    } catch (error) {
+      deleteError.textContent = error.message || "Could not delete your account.";
+    }
+  });
   document.getElementById("site-auth-account-logout").addEventListener("click", async () => {
     try {
       await fetchJson("/api/auth/signout", { method: "POST", body: JSON.stringify({}) });

@@ -518,27 +518,32 @@ body {
 }
 
 .site-auth-card > #site-auth-prompt-view,
-.site-auth-card > #site-auth-settings-view {
+.site-auth-card > #site-auth-settings-view,
+.site-auth-card > #site-auth-delete-view {
   color: #fff6ff;
 }
 
 .site-auth-card > #site-auth-prompt-view,
-.site-auth-card > #site-auth-settings-view {
+.site-auth-card > #site-auth-settings-view,
+.site-auth-card > #site-auth-delete-view {
   padding: 18px 18px 10px;
 }
 
 #site-auth-prompt-view .support-text,
-#site-auth-settings-view .support-text {
+#site-auth-settings-view .support-text,
+#site-auth-delete-view .support-text {
   color: rgba(255, 240, 255, 0.88);
 }
 
 #site-auth-settings-view .form-field,
-#site-auth-prompt-view .form-field {
+#site-auth-prompt-view .form-field,
+#site-auth-delete-view .form-field {
   color: #fff6ff;
 }
 
 #site-auth-settings-view input,
-#site-auth-prompt-view input {
+#site-auth-prompt-view input,
+#site-auth-delete-view input {
   border-radius: 18px;
   border: 1px solid rgba(255,255,255,0.18);
   background: rgba(255,255,255,0.12);
@@ -546,8 +551,28 @@ body {
 }
 
 #site-auth-settings-view input::placeholder,
-#site-auth-prompt-view input::placeholder {
+#site-auth-prompt-view input::placeholder,
+#site-auth-delete-view input::placeholder {
   color: rgba(255,255,255,0.68);
+}
+
+.site-auth-danger-zone {
+  margin-top: 18px;
+  padding: 16px;
+  border-radius: 22px;
+  background: rgba(180, 39, 73, 0.16);
+  border: 1px solid rgba(255, 133, 157, 0.3);
+}
+
+.site-auth-danger-button {
+  background: rgba(180, 39, 73, 0.22);
+  color: #ffd7df;
+  border: 1px solid rgba(255, 133, 157, 0.35);
+}
+
+.site-auth-danger-button:hover {
+  background: rgba(180, 39, 73, 0.32);
+  color: #fff1f4;
 }
 
 .home-header {

@@ -628,6 +628,12 @@ async function updateUserProfile(userId, username, profileDataInput) {
   return buildPublicUser(result.rows[0] || null);
 }
 
+async function deleteUserAccount(userId) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  await pool.query(`DELETE FROM app_users WHERE id = $1`, [userId]);
+}
+
 function sanitizeHomeworkPayload(input) {
   const raw = input && typeof input === 'object' ? input : {};
   const title = String(raw.title || '').trim();
@@ -980,6 +986,31 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
       sendJson(res, statusCode, { error: error.message || 'Failed to update profile.' });
+    }
+    return;
+  }
+
+  if (req.method === 'POST' && pathname === '/api/auth/delete-account') {
+    try {
+      const user = await getAuthenticatedUser(req);
+      if (!user) {
+        sendJson(res, 401, { error: 'Sign in required.' });
+        return;
+      }
+
+      const body = await readRequestBody(req);
+      const parsed = JSON.parse(body || '{}');
+      if (String(parsed.confirmation || '').trim() !== 'DELETE') {
+        sendJson(res, 400, { error: 'Type DELETE in all caps to confirm account deletion.' });
+        return;
+      }
+
+      await deleteUserAccount(user.id);
+      clearSessionCookie(res);
+      sendJson(res, 200, { ok: true });
+    } catch (error) {
+      const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
+      sendJson(res, statusCode, { error: error.message || 'Failed to delete account.' });
     }
     return;
   }
