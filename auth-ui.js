@@ -1,73 +1,197 @@
 (function () {
   const skipPromptKey = "cg_skip_sign_in_prompt";
-  const gameKey = document.body.dataset.gameKey || "";
-  const gameLabel = document.body.dataset.gameLabel || "";
-  const trackButtons = Array.from(document.querySelectorAll("[data-track-score]"));
-  const promptLinks = Array.from(document.querySelectorAll("[data-auth-prompt-link]"));
   const avatarColors = ["#6a86c7", "#9f5de2", "#f06aa7", "#ff8c5a", "#3fb98d", "#3f6ddc", "#5c4aa8", "#1f2933"];
-  const avatarEmojis = ["🐰", "🌟", "🎮", "🧠", "🔥", "🍓", "🌙", "📘", "🎯", "🪐", "💡", "🎨"];
+  const avatarEmojis = [
+    0x1F430,
+    0x1F31F,
+    0x1F3AE,
+    0x1F9E0,
+    0x1F525,
+    0x1F353,
+    0x1F319,
+    0x1F4D8,
+    0x1F3AF,
+    0x1FA90,
+    0x1F4A1,
+    0x1F3A8
+  ].map((codePoint) => String.fromCodePoint(codePoint));
 
-  let authState = { signedIn: false, username: null, profileData: null };
-  let trackingEnabled = false;
-  let pendingAction = null;
-  let authMode = "signin";
-  let syncTimeoutId = null;
-  let menuOpen = false;
-  let authPhotoValue = "";
-  let settingsPhotoValue = "";
+  const body = document.body;
+  if (!body) {
+    return;
+  }
+
+  const gameKey = body.dataset.gameKey || "";
+  const gameLabel = body.dataset.gameLabel || "this game";
+  const trackButtons = Array.from(document.querySelectorAll("[data-track-score='true']"));
+  const promptLinks = Array.from(document.querySelectorAll("[data-auth-prompt-link='true']"));
+
+  const authState = {
+    signedIn: false,
+    username: null,
+    profileData: null
+  };
+
+  const uiState = {
+    trackingEnabled: false,
+    pendingAction: null,
+    authMode: "signin",
+    menuOpen: false,
+    modalView: null,
+    scoreSyncTimeoutId: null
+  };
+
+  function escapeHtml(value) {
+    return String(value ?? "")
+      .replaceAll("&", "&amp;")
+      .replaceAll("<", "&lt;")
+      .replaceAll(">", "&gt;")
+      .replaceAll('"', "&quot;")
+      .replaceAll("'", "&#39;");
+  }
+
+  function normalizeInitials(value, username = "") {
+    const trimmed = String(value || "").trim().replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase();
+    if (trimmed) {
+      return trimmed;
+    }
+
+    const fallback = String(username || "").trim().slice(0, 2).toUpperCase();
+    return fallback || "CG";
+  }
+
+  function getDefaultProfileData(username = "") {
+    return {
+      avatarType: "initials",
+      avatarValue: normalizeInitials("", username),
+      avatarColor: avatarColors[0]
+    };
+  }
+
+  function normalizeProfileData(profileData, username = "") {
+    const defaults = getDefaultProfileData(username);
+    if (!profileData || typeof profileData !== "object") {
+      return defaults;
+    }
+
+    const avatarType = profileData.avatarType === "emoji" || profileData.avatarType === "photo"
+      ? profileData.avatarType
+      : "initials";
+    const avatarColor = avatarColors.includes(profileData.avatarColor) ? profileData.avatarColor : defaults.avatarColor;
+
+    if (avatarType === "emoji") {
+      const avatarValue = String(profileData.avatarValue || "").trim();
+      return {
+        avatarType,
+        avatarValue: avatarValue || avatarEmojis[0],
+        avatarColor
+      };
+    }
+
+    if (avatarType === "photo") {
+      const avatarValue = String(profileData.avatarValue || "");
+      if (avatarValue.startsWith("data:image/")) {
+        return {
+          avatarType,
+          avatarValue,
+          avatarColor
+        };
+      }
+    }
+
+    return {
+      avatarType: "initials",
+      avatarValue: normalizeInitials(profileData.avatarValue, username),
+      avatarColor
+    };
+  }
+
+  function shouldSkipPrompt() {
+    return window.localStorage.getItem(skipPromptKey) === "true";
+  }
+
+  function setSkipPromptPreference(shouldSkip) {
+    window.localStorage.setItem(skipPromptKey, shouldSkip ? "true" : "false");
+    if (promptSkipCheckbox) {
+      promptSkipCheckbox.checked = shouldSkip;
+    }
+    if (settingsSkipCheckbox) {
+      settingsSkipCheckbox.checked = shouldSkip;
+    }
+  }
+
+  function buildAvatarMarkup(profileData, username, options = {}) {
+    const normalized = normalizeProfileData(profileData, username);
+    const classes = ["site-avatar"];
+    if (options.large) {
+      classes.push("site-avatar-large");
+    }
+    if (normalized.avatarType === "photo") {
+      classes.push("site-avatar-photo");
+    }
+
+    if (normalized.avatarType === "photo") {
+      return `<span class="${classes.join(" ")}"><img src="${escapeHtml(normalized.avatarValue)}" alt="${escapeHtml(username || "Profile avatar")}"></span>`;
+    }
+
+    const style = normalized.avatarType === "initials"
+      ? ` style="background:${escapeHtml(normalized.avatarColor)}"`
+      : ` style="background:${escapeHtml(normalized.avatarColor)}1A;color:${escapeHtml(normalized.avatarColor)}"`;
+    const label = normalized.avatarType === "emoji" ? normalized.avatarValue : normalizeInitials(normalized.avatarValue, username);
+    return `<span class="${classes.join(" ")}"${style}>${escapeHtml(label)}</span>`;
+  }
 
   function buildColorOptions(prefix) {
-    return avatarColors.map((color) => `
-      <button type="button" class="site-avatar-color" data-avatar-color="${color}" data-avatar-prefix="${prefix}" style="background:${color}" aria-label="Avatar color ${color}"></button>
-    `).join("");
+    return avatarColors.map((color, index) => {
+      const selectedClass = index === 0 ? " is-selected" : "";
+      return `<button type="button" class="site-avatar-color${selectedClass}" data-avatar-color="${escapeHtml(color)}" data-avatar-prefix="${escapeHtml(prefix)}" style="background:${escapeHtml(color)}" aria-label="Choose color ${index + 1}"></button>`;
+    }).join("");
   }
 
   function buildEmojiOptions(prefix) {
-    return avatarEmojis.map((emoji) => `
-      <button type="button" class="site-avatar-emoji" data-avatar-emoji="${emoji}" data-avatar-prefix="${prefix}" aria-label="Choose ${emoji}">${emoji}</button>
-    `).join("");
+    return avatarEmojis.map((emoji, index) => {
+      const selectedClass = index === 0 ? " is-selected" : "";
+      return `<button type="button" class="site-avatar-emoji${selectedClass}" data-avatar-emoji="${escapeHtml(emoji)}" data-avatar-prefix="${escapeHtml(prefix)}" aria-label="Choose emoji avatar">${escapeHtml(emoji)}</button>`;
+    }).join("");
   }
 
-  function buildAvatarEditor(prefix) {
+  function buildAvatarEditor(prefix, heading, copy) {
     return `
-      <section class="site-avatar-editor" data-avatar-editor="${prefix}">
+      <div class="site-avatar-editor" data-avatar-editor="${escapeHtml(prefix)}">
         <div class="site-avatar-preview-wrap">
-          <div id="${prefix}-avatar-preview" class="site-avatar-preview"></div>
-          <div class="site-avatar-meta">
-            <span class="spoken-label">Profile Picture</span>
-            <p class="support-text">Pick initials, an emoji, or a small photo.</p>
+          <div id="${escapeHtml(prefix)}-avatar-preview">${buildAvatarMarkup(getDefaultProfileData(""), "", { large: true })}</div>
+          <div>
+            <p class="spoken-label">${escapeHtml(heading)}</p>
+            <p class="support-text">${escapeHtml(copy)}</p>
           </div>
         </div>
-        <div class="site-avatar-mode-row" role="tablist" aria-label="Avatar type">
-          <button type="button" class="site-avatar-mode" data-avatar-mode="initials" data-avatar-prefix="${prefix}">Colors + Initials</button>
-          <button type="button" class="site-avatar-mode" data-avatar-mode="emoji" data-avatar-prefix="${prefix}">Emoji</button>
-          <button type="button" class="site-avatar-mode" data-avatar-mode="photo" data-avatar-prefix="${prefix}">Photo</button>
+        <div class="site-avatar-mode-row">
+          <button type="button" class="site-avatar-mode is-selected" data-avatar-mode="initials" data-avatar-prefix="${escapeHtml(prefix)}">Colors + Initials</button>
+          <button type="button" class="site-avatar-mode" data-avatar-mode="emoji" data-avatar-prefix="${escapeHtml(prefix)}">Emoji</button>
+          <button type="button" class="site-avatar-mode" data-avatar-mode="photo" data-avatar-prefix="${escapeHtml(prefix)}">Photo</button>
         </div>
-        <div id="${prefix}-avatar-panel-initials" class="site-avatar-panel">
-          <label class="form-field" for="${prefix}-avatar-initials">
+        <div class="site-avatar-panel" data-avatar-panel="initials" data-avatar-prefix="${escapeHtml(prefix)}">
+          <label class="site-auth-field" for="${escapeHtml(prefix)}-avatar-initials">
             Initials
-            <input id="${prefix}-avatar-initials" type="text" maxlength="2" placeholder="AB">
+            <input id="${escapeHtml(prefix)}-avatar-initials" type="text" maxlength="2" placeholder="CG">
           </label>
           <div class="site-avatar-color-grid">
             ${buildColorOptions(prefix)}
           </div>
         </div>
-        <div id="${prefix}-avatar-panel-emoji" class="site-avatar-panel hidden">
+        <div class="site-avatar-panel hidden" data-avatar-panel="emoji" data-avatar-prefix="${escapeHtml(prefix)}">
           <div class="site-avatar-emoji-grid">
             ${buildEmojiOptions(prefix)}
           </div>
-          <div class="site-avatar-color-grid">
-            ${buildColorOptions(prefix)}
-          </div>
         </div>
-        <div id="${prefix}-avatar-panel-photo" class="site-avatar-panel hidden">
-          <label class="form-field" for="${prefix}-avatar-photo">
-            Upload Photo
-            <input id="${prefix}-avatar-photo" type="file" accept="image/png,image/jpeg,image/webp,image/gif">
+        <div class="site-avatar-panel hidden" data-avatar-panel="photo" data-avatar-prefix="${escapeHtml(prefix)}">
+          <label class="site-auth-field" for="${escapeHtml(prefix)}-avatar-photo">
+            Photo
+            <input id="${escapeHtml(prefix)}-avatar-photo" type="file" accept="image/*">
           </label>
-          <p class="support-text">Use a small square image for the cleanest result.</p>
+          <p class="support-text">Choose a small image file. It will be saved to your profile.</p>
         </div>
-      </section>
+      </div>
     `;
   }
 
@@ -76,650 +200,687 @@
   shell.innerHTML = `
     <div class="site-auth-topbar">
       <div class="site-auth-anchor">
-        <button id="site-auth-button" type="button" class="site-auth-button">
-          <span id="site-auth-button-avatar" class="site-auth-button-avatar"></span>
-          <span id="site-auth-button-label" class="site-auth-button-label">Sign In</span>
-        </button>
-        <div id="site-auth-menu" class="site-auth-menu hidden">
-          <button id="site-auth-settings-button" type="button" class="site-auth-menu-item">Account Settings</button>
-          <button id="site-auth-signout-button" type="button" class="site-auth-menu-item site-auth-menu-item-danger">Log out</button>
+        <div class="site-auth-actions">
+          <button id="site-auth-pref-button" class="site-auth-button" type="button" aria-label="Settings">⚙</button>
+          <button id="site-auth-button" class="site-auth-button" type="button">
+            <span id="site-auth-button-label" class="site-auth-button-label">Sign In</span>
+            <span id="site-auth-button-avatar" class="site-auth-button-avatar" hidden></span>
+          </button>
+        </div>
+        <div id="site-auth-menu" class="site-auth-menu" hidden>
+          <button id="site-auth-settings-button" class="site-auth-button site-auth-menu-item" type="button">Account Settings</button>
+          <button id="site-auth-signout-button" class="site-auth-button site-auth-menu-item site-auth-menu-item-danger" type="button">Log out</button>
         </div>
       </div>
     </div>
-    <div id="site-auth-modal" class="site-auth-modal hidden" role="dialog" aria-modal="true" aria-labelledby="site-auth-title">
-      <div class="site-auth-backdrop" data-auth-close="true"></div>
-      <div class="site-auth-card">
-        <button type="button" class="site-auth-close" data-auth-close="true" aria-label="Close">x</button>
-        <div id="site-auth-prompt-view">
-          <p class="eyebrow">Score Tracking</p>
-          <h2 id="site-auth-title">Sign in for better usage</h2>
-          <p id="site-auth-prompt-text" class="support-text">This game requires sign in for better usage. Continue?</p>
-          <label class="site-auth-checkbox">
-            <input id="site-auth-hide-checkbox" type="checkbox">
-            Don't show again
-          </label>
-          <div class="actions site-auth-actions">
-            <button id="site-auth-signin-button" type="button">Sign In</button>
-            <button id="site-auth-continue-button" type="button" class="secondary">Continue</button>
-          </div>
-        </div>
-        <div id="site-auth-form-view" class="hidden">
-          <div class="site-auth-hero">
-            <div class="site-auth-stars" aria-hidden="true"></div>
-            <div class="site-auth-mountains" aria-hidden="true"></div>
-            <div class="site-auth-forest" aria-hidden="true"></div>
-            <div class="site-auth-sky-glow" aria-hidden="true"></div>
-            <div class="site-auth-form-shell">
-              <p class="eyebrow site-auth-hero-eyebrow">Welcome Back</p>
-              <h2 id="site-auth-form-title" class="site-auth-hero-title">Login</h2>
-              <p id="site-auth-form-copy" class="site-auth-hero-copy">Sign in to track your score and keep it on your account.</p>
-              <label class="site-auth-field" for="site-auth-username">
-                <span>Username</span>
-                <input id="site-auth-username" type="text" autocomplete="username" placeholder="Username">
-              </label>
-              <label class="site-auth-field" for="site-auth-password">
-                <span>Password</span>
-                <input id="site-auth-password" type="password" autocomplete="current-password" placeholder="Password">
-              </label>
-              <div class="site-auth-row">
-                <label class="site-auth-checkbox site-auth-checkbox-inline">
-                  <input id="site-auth-remember" type="checkbox" checked>
-                  Remember me
-                </label>
-                <button id="site-auth-forgot" type="button" class="site-auth-link-button">Forgot password?</button>
-              </div>
-              <div id="site-auth-signup-profile" class="hidden">
-                ${buildAvatarEditor("site-auth")}
-              </div>
-              <p id="site-auth-error" class="site-auth-error" aria-live="polite"></p>
-              <div class="site-auth-form-actions">
-                <button id="site-auth-submit" type="button" class="site-auth-primary">Login</button>
-                <button id="site-auth-back" type="button" class="site-auth-link-button">Back</button>
-              </div>
-              <p class="site-auth-switch-copy">
-                <span id="site-auth-switch-prefix">Don't have an account?</span>
-                <button id="site-auth-switch-button" type="button" class="site-auth-link-button">Register</button>
-              </p>
-            </div>
-          </div>
-        </div>
-        <div id="site-auth-settings-view" class="hidden">
-          <p class="eyebrow">Account Settings</p>
-          <h2>Customize your profile</h2>
-          <p id="site-auth-settings-copy" class="support-text"></p>
-          ${buildAvatarEditor("site-settings")}
-          <p id="site-auth-settings-error" class="site-auth-error" aria-live="polite"></p>
-          <div class="actions site-auth-actions">
-            <button id="site-auth-settings-save" type="button">Save Changes</button>
-            <button id="site-auth-settings-cancel" type="button" class="secondary">Cancel</button>
-          </div>
-        </div>
+    <div id="site-auth-modal" class="site-auth-modal" hidden>
+      <div id="site-auth-backdrop" class="site-auth-backdrop"></div>
+      <div class="site-auth-card" role="dialog" aria-modal="true" aria-labelledby="site-auth-title">
+        <button id="site-auth-close" class="site-auth-close" type="button" aria-label="Close">&times;</button>
       </div>
     </div>
   `;
-  document.body.appendChild(shell);
+  body.appendChild(shell);
 
-  const authButtonEl = document.getElementById("site-auth-button");
-  const authButtonAvatarEl = document.getElementById("site-auth-button-avatar");
-  const authButtonLabelEl = document.getElementById("site-auth-button-label");
-  const menuEl = document.getElementById("site-auth-menu");
-  const modalEl = document.getElementById("site-auth-modal");
-  const promptViewEl = document.getElementById("site-auth-prompt-view");
-  const formViewEl = document.getElementById("site-auth-form-view");
-  const settingsViewEl = document.getElementById("site-auth-settings-view");
-  const promptTextEl = document.getElementById("site-auth-prompt-text");
-  const hideCheckboxEl = document.getElementById("site-auth-hide-checkbox");
-  const promptSignInEl = document.getElementById("site-auth-signin-button");
-  const promptContinueEl = document.getElementById("site-auth-continue-button");
-  const formTitleEl = document.getElementById("site-auth-form-title");
-  const formCopyEl = document.getElementById("site-auth-form-copy");
-  const usernameEl = document.getElementById("site-auth-username");
-  const passwordEl = document.getElementById("site-auth-password");
-  const rememberEl = document.getElementById("site-auth-remember");
-  const forgotEl = document.getElementById("site-auth-forgot");
-  const authSignupProfileEl = document.getElementById("site-auth-signup-profile");
-  const errorEl = document.getElementById("site-auth-error");
-  const submitEl = document.getElementById("site-auth-submit");
-  const backEl = document.getElementById("site-auth-back");
-  const switchPrefixEl = document.getElementById("site-auth-switch-prefix");
-  const switchButtonEl = document.getElementById("site-auth-switch-button");
-  const settingsButtonEl = document.getElementById("site-auth-settings-button");
-  const signoutButtonEl = document.getElementById("site-auth-signout-button");
-  const settingsCopyEl = document.getElementById("site-auth-settings-copy");
-  const settingsSaveEl = document.getElementById("site-auth-settings-save");
-  const settingsCancelEl = document.getElementById("site-auth-settings-cancel");
-  const settingsErrorEl = document.getElementById("site-auth-settings-error");
-
-  function escapeHtml(value) {
-    return String(value)
-      .replaceAll("&", "&amp;")
-      .replaceAll("<", "&lt;")
-      .replaceAll(">", "&gt;")
-      .replaceAll('"', "&quot;")
-      .replaceAll("'", "&#39;");
+  const authCard = shell.querySelector(".site-auth-card");
+  const settingsButtonEl = shell.querySelector("#site-auth-pref-button");
+  if (settingsButtonEl) {
+    settingsButtonEl.innerHTML = "&#9881;";
   }
 
-  function shouldSkipPrompt() {
-    return window.localStorage.getItem(skipPromptKey) === "1";
-  }
+  authCard?.insertAdjacentHTML("beforeend", `
+    <section id="site-auth-prompt-view" hidden>
+      <p class="eyebrow">Heads up</p>
+      <h2 id="site-auth-title">Sign in for better tracking</h2>
+      <p class="support-text">This game requires sign in for better usage. Continue?</p>
+      <label class="site-auth-checkbox">
+        <input id="site-auth-prompt-skip" type="checkbox">
+        Don't show again
+      </label>
+      <div class="actions site-auth-actions">
+        <button id="site-auth-prompt-signin" type="button">Sign In</button>
+        <button id="site-auth-prompt-decline" type="button" class="secondary">No thanks</button>
+      </div>
+    </section>
 
-  function updateSkipPreference() {
-    if (hideCheckboxEl.checked) {
-      window.localStorage.setItem(skipPromptKey, "1");
-      return;
-    }
+    <section id="site-auth-auth-view" class="site-auth-hero" hidden>
+      <div class="site-auth-stars"></div>
+      <div class="site-auth-sky-glow"></div>
+      <div class="site-auth-mountains"></div>
+      <div class="site-auth-forest"></div>
+      <div class="site-auth-form-shell">
+        <p class="site-auth-hero-eyebrow">Creations account</p>
+        <h2 id="site-auth-heading" class="site-auth-hero-title">Login</h2>
+        <p id="site-auth-copy" class="site-auth-hero-copy">Save your scores, carry your profile across devices, and keep your tracking settings.</p>
+        <label class="site-auth-field" for="site-auth-username">
+          Username
+          <input id="site-auth-username" type="text" autocomplete="username" placeholder="Username">
+        </label>
+        <label class="site-auth-field" for="site-auth-password">
+          Password
+          <input id="site-auth-password" type="password" autocomplete="current-password" placeholder="Password">
+        </label>
+        <div class="site-auth-row">
+          <label class="site-auth-checkbox site-auth-checkbox-inline">
+            <input id="site-auth-remember" type="checkbox">
+            Remember me
+          </label>
+          <button id="site-auth-forgot" class="site-auth-link-button" type="button">Forgot password?</button>
+        </div>
+        <div id="site-auth-signup-avatar-wrap" class="hidden">
+          ${buildAvatarEditor("signup", "Profile picture", "Pick colors and initials, an emoji, or a photo.")}
+        </div>
+        <p id="site-auth-error" class="site-auth-error" aria-live="polite"></p>
+        <div class="site-auth-form-actions">
+          <button id="site-auth-submit" class="site-auth-primary" type="button">Login</button>
+        </div>
+        <p class="site-auth-switch-copy">
+          <span id="site-auth-switch-label">Don't have an account?</span>
+          <button id="site-auth-switch" class="site-auth-link-button" type="button">Register</button>
+        </p>
+      </div>
+    </section>
 
-    window.localStorage.removeItem(skipPromptKey);
-  }
+    <section id="site-auth-settings-view" hidden>
+      <p class="eyebrow">Settings</p>
+      <h2 id="site-auth-settings-title">Account Settings</h2>
+      <p id="site-auth-settings-copy" class="support-text">Change your profile picture and adjust whether the sign-in reminder appears.</p>
+      <div id="site-auth-settings-avatar-wrap">
+        ${buildAvatarEditor("settings", "Profile picture", "Your avatar appears on the top-right button after you sign in.")}
+      </div>
+      <label class="site-auth-checkbox">
+        <input id="site-auth-settings-skip" type="checkbox">
+        Skip the sign-in message before games
+      </label>
+      <p id="site-auth-settings-error" class="site-auth-error" aria-live="polite"></p>
+      <div class="actions site-auth-actions">
+        <button id="site-auth-settings-save" type="button">Save Changes</button>
+        <button id="site-auth-settings-cancel" type="button" class="secondary">Cancel</button>
+      </div>
+    </section>
+  `);
 
-  function getDefaultProfileData(username = "") {
-    return {
-      avatarType: "initials",
-      avatarValue: String(username || "").replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase() || "CG",
-      avatarColor: "#6a86c7"
-    };
-  }
+  const authButton = document.getElementById("site-auth-button");
+  const authButtonLabel = document.getElementById("site-auth-button-label");
+  const authButtonAvatar = document.getElementById("site-auth-button-avatar");
+  const menu = document.getElementById("site-auth-menu");
+  const menuSettingsButton = document.getElementById("site-auth-settings-button");
+  const signoutButton = document.getElementById("site-auth-signout-button");
+  const settingsCogButton = document.getElementById("site-auth-pref-button");
 
-  function normalizeProfileData(profileData, username = "") {
-    const fallback = getDefaultProfileData(username);
-    return {
-      avatarType: ["initials", "emoji", "photo"].includes(profileData && profileData.avatarType) ? profileData.avatarType : fallback.avatarType,
-      avatarValue: String(profileData && profileData.avatarValue ? profileData.avatarValue : fallback.avatarValue),
-      avatarColor: /^#[0-9a-f]{6}$/i.test(profileData && profileData.avatarColor ? profileData.avatarColor : "")
-        ? profileData.avatarColor
-        : fallback.avatarColor
-    };
-  }
+  const modal = document.getElementById("site-auth-modal");
+  const closeButton = document.getElementById("site-auth-close");
+  const backdrop = document.getElementById("site-auth-backdrop");
+  const promptView = document.getElementById("site-auth-prompt-view");
+  const authView = document.getElementById("site-auth-auth-view");
+  const settingsView = document.getElementById("site-auth-settings-view");
 
-  function getAvatarMarkup(profileData, username, className = "") {
-    const normalized = normalizeProfileData(profileData, username);
-    const classes = ["site-avatar", className, `site-avatar-${normalized.avatarType}`].filter(Boolean).join(" ");
+  const promptSkipCheckbox = document.getElementById("site-auth-prompt-skip");
+  const promptSigninButton = document.getElementById("site-auth-prompt-signin");
+  const promptDeclineButton = document.getElementById("site-auth-prompt-decline");
 
-    if (normalized.avatarType === "photo") {
-      return `<span class="${classes}" style="background:${escapeHtml(normalized.avatarColor)}"><img src="${escapeHtml(normalized.avatarValue)}" alt=""></span>`;
-    }
+  const authHeading = document.getElementById("site-auth-heading");
+  const authCopy = document.getElementById("site-auth-copy");
+  const usernameInput = document.getElementById("site-auth-username");
+  const passwordInput = document.getElementById("site-auth-password");
+  const rememberCheckbox = document.getElementById("site-auth-remember");
+  const forgotButton = document.getElementById("site-auth-forgot");
+  const signupAvatarWrap = document.getElementById("site-auth-signup-avatar-wrap");
+  const submitButton = document.getElementById("site-auth-submit");
+  const switchLabel = document.getElementById("site-auth-switch-label");
+  const switchButton = document.getElementById("site-auth-switch");
+  const authError = document.getElementById("site-auth-error");
 
-    return `<span class="${classes}" style="background:${escapeHtml(normalized.avatarColor)}">${escapeHtml(normalized.avatarValue)}</span>`;
-  }
-
-  function renderAvatar(targetEl, profileData, username, className = "") {
-    targetEl.innerHTML = getAvatarMarkup(profileData, username, className);
-  }
-
-  function getEditorState(prefix) {
-    return {
-      wrapper: document.querySelector(`[data-avatar-editor="${prefix}"]`),
-      preview: document.getElementById(`${prefix}-avatar-preview`),
-      initialsInput: document.getElementById(`${prefix}-avatar-initials`),
-      photoInput: document.getElementById(`${prefix}-avatar-photo`),
-      panels: {
-        initials: document.getElementById(`${prefix}-avatar-panel-initials`),
-        emoji: document.getElementById(`${prefix}-avatar-panel-emoji`),
-        photo: document.getElementById(`${prefix}-avatar-panel-photo`)
-      },
-      prefix
-    };
-  }
-
-  const authEditor = getEditorState("site-auth");
-  const settingsEditor = getEditorState("site-settings");
+  const settingsTitle = document.getElementById("site-auth-settings-title");
+  const settingsCopy = document.getElementById("site-auth-settings-copy");
+  const settingsAvatarWrap = document.getElementById("site-auth-settings-avatar-wrap");
+  const settingsSkipCheckbox = document.getElementById("site-auth-settings-skip");
+  const settingsSaveButton = document.getElementById("site-auth-settings-save");
+  const settingsCancelButton = document.getElementById("site-auth-settings-cancel");
+  const settingsError = document.getElementById("site-auth-settings-error");
 
   function getStoredPhotoValue(prefix) {
-    return prefix === "site-settings" ? settingsPhotoValue : authPhotoValue;
+    const input = document.getElementById(`${prefix}-avatar-photo`);
+    return input?.dataset.photoValue || "";
   }
 
   function setStoredPhotoValue(prefix, value) {
-    if (prefix === "site-settings") {
-      settingsPhotoValue = value;
-      return;
-    }
-
-    authPhotoValue = value;
-  }
-
-  function setEditorMode(prefix, mode) {
-    const editor = prefix === "site-settings" ? settingsEditor : authEditor;
-    const wrapper = editor.wrapper;
-    wrapper.dataset.avatarMode = mode;
-
-    for (const panelMode of ["initials", "emoji", "photo"]) {
-      editor.panels[panelMode].classList.toggle("hidden", panelMode !== mode);
-    }
-
-    for (const button of wrapper.querySelectorAll(".site-avatar-mode")) {
-      const selected = button.dataset.avatarMode === mode;
-      button.classList.toggle("is-selected", selected);
-      button.setAttribute("aria-pressed", String(selected));
+    const input = document.getElementById(`${prefix}-avatar-photo`);
+    if (input) {
+      input.dataset.photoValue = value || "";
     }
   }
 
-  function setSelectedColor(prefix, color) {
-    const editor = prefix === "site-settings" ? settingsEditor : authEditor;
-    editor.wrapper.dataset.avatarColor = color;
-    for (const button of editor.wrapper.querySelectorAll(".site-avatar-color")) {
-      button.classList.toggle("is-selected", button.dataset.avatarColor === color);
-    }
-  }
-
-  function setSelectedEmoji(prefix, emoji) {
-    const editor = prefix === "site-settings" ? settingsEditor : authEditor;
-    editor.wrapper.dataset.avatarEmoji = emoji;
-    for (const button of editor.wrapper.querySelectorAll(".site-avatar-emoji")) {
-      button.classList.toggle("is-selected", button.dataset.avatarEmoji === emoji);
-    }
-  }
-
-  function getEditorProfileData(prefix) {
-    const editor = prefix === "site-settings" ? settingsEditor : authEditor;
-    const avatarType = editor.wrapper.dataset.avatarMode || "initials";
-    const avatarColor = editor.wrapper.dataset.avatarColor || "#6a86c7";
-    const initials = editor.initialsInput.value.trim().replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase();
-    const emoji = editor.wrapper.dataset.avatarEmoji || avatarEmojis[0];
-    const photo = getStoredPhotoValue(prefix);
-
-    if (avatarType === "emoji") {
-      return {
-        avatarType,
-        avatarValue: emoji,
-        avatarColor
-      };
-    }
-
-    if (avatarType === "photo") {
-      return {
-        avatarType,
-        avatarValue: photo,
-        avatarColor
-      };
-    }
-
+  function getEditorState(prefix) {
+    const container = shell.querySelector(`[data-avatar-editor='${prefix}']`);
+    const selectedModeButton = container?.querySelector(`.site-avatar-mode.is-selected[data-avatar-prefix='${prefix}']`);
+    const selectedColorButton = container?.querySelector(`.site-avatar-color.is-selected[data-avatar-prefix='${prefix}']`);
+    const selectedEmojiButton = container?.querySelector(`.site-avatar-emoji.is-selected[data-avatar-prefix='${prefix}']`);
     return {
-      avatarType,
-      avatarValue: initials || getDefaultProfileData(usernameEl.value.trim()).avatarValue,
-      avatarColor
+      container,
+      mode: selectedModeButton?.dataset.avatarMode || "initials",
+      color: selectedColorButton?.dataset.avatarColor || avatarColors[0],
+      emoji: selectedEmojiButton?.dataset.avatarEmoji || avatarEmojis[0],
+      initialsInput: document.getElementById(`${prefix}-avatar-initials`)
     };
   }
 
-  function updateEditorPreview(prefix) {
-    const editor = prefix === "site-settings" ? settingsEditor : authEditor;
-    const username = prefix === "site-settings" ? authState.username : usernameEl.value.trim();
-    const profileData = getEditorProfileData(prefix);
-    renderAvatar(editor.preview, profileData, username, "site-avatar-large");
-  }
-
-  function populateEditor(prefix, profileData, username) {
-    const editor = prefix === "site-settings" ? settingsEditor : authEditor;
-    const normalized = normalizeProfileData(profileData, username);
-    editor.initialsInput.value = normalized.avatarType === "initials"
-      ? normalized.avatarValue.replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase()
-      : getDefaultProfileData(username).avatarValue;
-    setStoredPhotoValue(prefix, normalized.avatarType === "photo" ? normalized.avatarValue : "");
-    if (editor.photoInput) {
-      editor.photoInput.value = "";
+  function getEditorProfileData(prefix, username = "") {
+    const state = getEditorState(prefix);
+    if (state.mode === "emoji") {
+      return {
+        avatarType: "emoji",
+        avatarValue: state.emoji,
+        avatarColor: state.color
+      };
     }
-    setEditorMode(prefix, normalized.avatarType);
+
+    if (state.mode === "photo") {
+      const photoValue = getStoredPhotoValue(prefix);
+      if (photoValue) {
+        return {
+          avatarType: "photo",
+          avatarValue: photoValue,
+          avatarColor: state.color
+        };
+      }
+    }
+
+    return {
+      avatarType: "initials",
+      avatarValue: normalizeInitials(state.initialsInput?.value, username),
+      avatarColor: state.color
+    };
+  }
+
+  function updateEditorPreview(prefix, username = "") {
+    const preview = document.getElementById(`${prefix}-avatar-preview`);
+    if (!preview) {
+      return;
+    }
+
+    preview.innerHTML = buildAvatarMarkup(getEditorProfileData(prefix, username), username, { large: true });
+  }
+
+  function setEditorMode(prefix, mode) {
+    const container = shell.querySelector(`[data-avatar-editor='${prefix}']`);
+    if (!container) {
+      return;
+    }
+
+    container.querySelectorAll(`.site-avatar-mode[data-avatar-prefix='${prefix}']`).forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.avatarMode === mode);
+    });
+
+    container.querySelectorAll(`.site-avatar-panel[data-avatar-prefix='${prefix}']`).forEach((panel) => {
+      panel.classList.toggle("hidden", panel.dataset.avatarPanel !== mode);
+    });
+
+    updateEditorPreview(prefix, prefix === "settings" ? authState.username : usernameInput?.value.trim());
+  }
+
+  function setSelectedColor(prefix, color) {
+    const container = shell.querySelector(`[data-avatar-editor='${prefix}']`);
+    container?.querySelectorAll(`.site-avatar-color[data-avatar-prefix='${prefix}']`).forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.avatarColor === color);
+    });
+    updateEditorPreview(prefix, prefix === "settings" ? authState.username : usernameInput?.value.trim());
+  }
+
+  function setSelectedEmoji(prefix, emoji) {
+    const container = shell.querySelector(`[data-avatar-editor='${prefix}']`);
+    container?.querySelectorAll(`.site-avatar-emoji[data-avatar-prefix='${prefix}']`).forEach((button) => {
+      button.classList.toggle("is-selected", button.dataset.avatarEmoji === emoji);
+    });
+    updateEditorPreview(prefix, prefix === "settings" ? authState.username : usernameInput?.value.trim());
+  }
+
+  function populateEditor(prefix, profileData, username = "") {
+    const normalized = normalizeProfileData(profileData, username);
+    const initialsInput = document.getElementById(`${prefix}-avatar-initials`);
+    if (initialsInput) {
+      initialsInput.value = normalized.avatarType === "initials"
+        ? normalizeInitials(normalized.avatarValue, username)
+        : normalizeInitials("", username);
+    }
+
     setSelectedColor(prefix, normalized.avatarColor);
-    setSelectedEmoji(prefix, normalized.avatarType === "emoji" ? normalized.avatarValue : avatarEmojis[0]);
-    updateEditorPreview(prefix);
+    setSelectedEmoji(prefix, normalized.avatarValue);
+    setStoredPhotoValue(prefix, normalized.avatarType === "photo" ? normalized.avatarValue : "");
+    setEditorMode(prefix, normalized.avatarType);
+    updateEditorPreview(prefix, username);
   }
 
-  function openMenu() {
-    menuOpen = true;
-    menuEl.classList.remove("hidden");
+  function clearAuthError() {
+    authError.textContent = "";
   }
 
-  function closeMenu() {
-    menuOpen = false;
-    menuEl.classList.add("hidden");
+  function clearSettingsError() {
+    settingsError.textContent = "";
   }
 
-  function showModal() {
-    modalEl.classList.remove("hidden");
+  function showModal(viewName) {
+    uiState.modalView = viewName;
+    modal.hidden = false;
+    promptView.hidden = viewName !== "prompt";
+    authView.hidden = viewName !== "auth";
+    settingsView.hidden = viewName !== "settings";
+    menu.hidden = true;
+    uiState.menuOpen = false;
   }
 
   function hideModal() {
-    modalEl.classList.add("hidden");
-    errorEl.textContent = "";
-    settingsErrorEl.textContent = "";
-    pendingAction = null;
+    modal.hidden = true;
+    uiState.modalView = null;
+    clearAuthError();
+    clearSettingsError();
   }
 
-  function setVisibleView(view) {
-    promptViewEl.classList.toggle("hidden", view !== "prompt");
-    formViewEl.classList.toggle("hidden", view !== "form");
-    settingsViewEl.classList.toggle("hidden", view !== "settings");
+  function closeMenu() {
+    uiState.menuOpen = false;
+    menu.hidden = true;
+  }
+
+  function openMenu() {
+    if (!authState.signedIn) {
+      return;
+    }
+
+    uiState.menuOpen = true;
+    menu.hidden = false;
   }
 
   function updateAuthButton() {
-    if (authState.signedIn) {
-      renderAvatar(authButtonAvatarEl, authState.profileData, authState.username);
-      authButtonLabelEl.classList.add("hidden");
-      authButtonEl.classList.add("is-avatar-button");
-      authButtonEl.setAttribute("aria-label", `Account for ${authState.username}`);
+    if (!authState.signedIn) {
+      authButton.classList.remove("is-avatar-button");
+      authButtonLabel.textContent = "Sign In";
+      authButtonLabel.classList.remove("hidden");
+      authButtonAvatar.hidden = true;
+      authButtonAvatar.innerHTML = "";
       return;
     }
 
-    authButtonAvatarEl.innerHTML = "";
-    authButtonLabelEl.classList.remove("hidden");
-    authButtonLabelEl.textContent = "Sign In";
-    authButtonEl.classList.remove("is-avatar-button");
-    authButtonEl.removeAttribute("aria-label");
+    authButton.classList.add("is-avatar-button");
+    authButtonLabel.classList.add("hidden");
+    authButtonAvatar.hidden = false;
+    authButtonAvatar.innerHTML = buildAvatarMarkup(authState.profileData, authState.username);
   }
 
-  function updateTrackButtons() {
-    for (const button of trackButtons) {
-      button.textContent = trackingEnabled ? "Tracking to your account" : "Track your score";
-      button.classList.toggle("is-tracking", trackingEnabled);
-    }
+  function setTrackButtonState(enabled) {
+    trackButtons.forEach((button) => {
+      button.textContent = enabled ? "Tracking enabled" : "Track your score";
+      button.classList.toggle("is-selected", enabled);
+    });
   }
 
-  async function fetchJson(url, options = {}) {
-    const response = await fetch(url, {
-      ...options,
+  function fetchJson(url, options = {}) {
+    return window.fetch(url, {
+      credentials: "same-origin",
       headers: {
         "Content-Type": "application/json",
         ...(options.headers || {})
+      },
+      ...options
+    }).then(async (response) => {
+      const payload = await response.json().catch(() => ({}));
+      if (!response.ok) {
+        const error = new Error(payload.error || "Request failed.");
+        error.statusCode = response.status;
+        throw error;
       }
+      return payload;
     });
-
-    let data = {};
-    try {
-      data = await response.json();
-    } catch {
-      data = {};
-    }
-
-    if (!response.ok) {
-      throw new Error(data.error || `Request failed: ${response.status}`);
-    }
-
-    return data;
   }
 
-  async function refreshAuthState() {
-    try {
-      authState = await fetchJson("/api/auth/me", { method: "GET" });
-    } catch {
-      authState = { signedIn: false, username: null, profileData: null };
-    }
+  function collectPiScore() {
+    return {
+      correctCount: Number(document.getElementById("correct-count")?.textContent || 0),
+      wrongCount: Number(document.getElementById("wrong-count")?.textContent || 0),
+      nextPosition: Number(document.getElementById("next-position")?.textContent || 1),
+      correctSequence: document.getElementById("correct-sequence")?.textContent || "-"
+    };
+  }
 
-    updateAuthButton();
-    updateTrackButtons();
+  function collectPrimeScore() {
+    return {
+      correctCount: Number(document.getElementById("prime-correct-count")?.textContent || 0),
+      wrongCount: Number(document.getElementById("prime-wrong-count")?.textContent || 0),
+      streakCount: Number(document.getElementById("prime-streak-count")?.textContent || 0),
+      averageTime: document.getElementById("prime-average-time")?.textContent || "-"
+    };
+  }
+
+  function collectBunnyScore() {
+    return {
+      wins: Number(document.getElementById("bunny-wins")?.textContent || 0),
+      losses: Number(document.getElementById("bunny-losses")?.textContent || 0),
+      streak: Number(document.getElementById("bunny-streak")?.textContent || 0),
+      rounds: Number(document.getElementById("bunny-rounds")?.textContent || 0)
+    };
   }
 
   function getCurrentScoreSnapshot() {
-    if (!window.gameScoreApi || typeof window.gameScoreApi.getScoreSnapshot !== "function") {
+    if (!gameKey) {
       return null;
     }
 
-    return window.gameScoreApi.getScoreSnapshot();
+    if (gameKey === "pi-voice-checker") {
+      return collectPiScore();
+    }
+
+    if (gameKey === "prime-speed-check") {
+      return collectPrimeScore();
+    }
+
+    if (gameKey === "easter-bunny-memory") {
+      return collectBunnyScore();
+    }
+
+    return null;
   }
 
-  async function pushCurrentScoreSnapshot() {
-    if (!trackingEnabled || !authState.signedIn || !gameKey) {
-      return;
+  function pushCurrentScoreSnapshot() {
+    if (!uiState.trackingEnabled || !authState.signedIn || !gameKey) {
+      return Promise.resolve();
     }
 
     const scoreData = getCurrentScoreSnapshot();
     if (!scoreData) {
-      return;
+      return Promise.resolve();
     }
 
-    await fetchJson(`/api/game-score/${encodeURIComponent(gameKey)}`, {
+    return fetchJson(`/api/game-score/${encodeURIComponent(gameKey)}`, {
       method: "POST",
       body: JSON.stringify({ scoreData })
-    });
+    }).catch(() => {});
   }
 
   function scheduleScoreSync() {
-    if (!trackingEnabled || !authState.signedIn || !gameKey) {
+    if (!uiState.trackingEnabled || !authState.signedIn || !gameKey) {
       return;
     }
 
-    if (syncTimeoutId !== null) {
-      window.clearTimeout(syncTimeoutId);
+    if (uiState.scoreSyncTimeoutId !== null) {
+      window.clearTimeout(uiState.scoreSyncTimeoutId);
     }
 
-    syncTimeoutId = window.setTimeout(() => {
-      syncTimeoutId = null;
-      pushCurrentScoreSnapshot().catch(() => {});
-    }, 150);
+    uiState.scoreSyncTimeoutId = window.setTimeout(() => {
+      uiState.scoreSyncTimeoutId = null;
+      pushCurrentScoreSnapshot();
+    }, 250);
   }
 
   function enableTracking() {
-    trackingEnabled = true;
-    updateTrackButtons();
-    scheduleScoreSync();
-  }
-
-  function showPrompt(action) {
-    pendingAction = action;
-    hideCheckboxEl.checked = shouldSkipPrompt();
-    const label = action && action.label ? action.label : (gameLabel || "This game");
-    promptTextEl.textContent = `${label} requires sign in for better usage. Continue?`;
-    setVisibleView("prompt");
-    showModal();
-  }
-
-  function setAuthMode(mode) {
-    authMode = mode;
-    const isSignup = mode === "signup";
-    formTitleEl.textContent = isSignup ? "Create Account" : "Login";
-    formCopyEl.textContent = isSignup
-      ? "Make an account to save scores and personalize your profile."
-      : "Sign in to track your score and keep it on your account.";
-    submitEl.textContent = isSignup ? "Create Account" : "Login";
-    switchPrefixEl.textContent = isSignup ? "Already have an account?" : "Don't have an account?";
-    switchButtonEl.textContent = isSignup ? "Sign In" : "Register";
-    authSignupProfileEl.classList.toggle("hidden", !isSignup);
-    backEl.classList.toggle("hidden", !pendingAction);
-    forgotEl.classList.toggle("hidden", isSignup);
-    rememberEl.closest(".site-auth-checkbox-inline").classList.toggle("hidden", isSignup);
-    errorEl.textContent = "";
-    if (isSignup) {
-      populateEditor("site-auth", getDefaultProfileData(usernameEl.value.trim()), usernameEl.value.trim());
-    }
-  }
-
-  function showAuthForm(mode = "signin") {
-    setAuthMode(mode);
-    setVisibleView("form");
-    showModal();
-    usernameEl.focus();
-  }
-
-  function showSettingsView() {
-    settingsCopyEl.textContent = `Signed in as ${authState.username}. Choose how your profile picture should look.`;
-    populateEditor("site-settings", authState.profileData, authState.username);
-    settingsErrorEl.textContent = "";
-    setVisibleView("settings");
-    showModal();
-  }
-
-  function runPendingActionAfterAuth() {
-    if (!pendingAction) {
-      hideModal();
+    if (!authState.signedIn) {
+      uiState.pendingAction = { type: "track" };
+      showAuthForm("signin");
       return;
     }
 
-    const action = pendingAction;
-    pendingAction = null;
+    uiState.trackingEnabled = true;
+    setTrackButtonState(true);
+    pushCurrentScoreSnapshot();
+  }
 
-    if (action.type === "link") {
+  function runPendingActionAfterAuth() {
+    const action = uiState.pendingAction;
+    uiState.pendingAction = null;
+    if (!action) {
+      return;
+    }
+
+    if (action.type === "link" && action.href) {
       window.location.href = action.href;
       return;
     }
 
     if (action.type === "track") {
       enableTracking();
-      hideModal();
+    }
+  }
+
+  function showPrompt(action) {
+    uiState.pendingAction = action;
+    promptSkipCheckbox.checked = shouldSkipPrompt();
+    showModal("prompt");
+  }
+
+  function showAuthForm(mode = "signin") {
+    uiState.authMode = mode;
+    clearAuthError();
+    authHeading.textContent = mode === "signup" ? "Create Account" : "Login";
+    authCopy.textContent = mode === "signup"
+      ? "Create an account to track your score, save your profile picture, and keep your settings."
+      : "Save your scores, carry your profile across devices, and keep your tracking settings.";
+    submitButton.textContent = mode === "signup" ? "Create Account" : "Login";
+    switchLabel.textContent = mode === "signup" ? "Already have an account?" : "Don't have an account?";
+    switchButton.textContent = mode === "signup" ? "Sign In" : "Register";
+    signupAvatarWrap.classList.toggle("hidden", mode !== "signup");
+    passwordInput.autocomplete = mode === "signup" ? "new-password" : "current-password";
+    showModal("auth");
+
+    if (mode === "signup") {
+      populateEditor("signup", getDefaultProfileData(usernameInput.value.trim()), usernameInput.value.trim());
+    }
+  }
+
+  function showSettingsView(prefOnly = false) {
+    clearSettingsError();
+    settingsSkipCheckbox.checked = shouldSkipPrompt();
+    settingsAvatarWrap.classList.toggle("hidden", prefOnly);
+    settingsTitle.textContent = prefOnly ? "Reminder Settings" : "Account Settings";
+    settingsCopy.textContent = prefOnly
+      ? "Choose whether the sign-in reminder appears before score-tracked games."
+      : "Change your profile picture and adjust whether the sign-in reminder appears.";
+    settingsSaveButton.textContent = prefOnly ? "Save Preference" : "Save Changes";
+    showModal("settings");
+
+    if (!prefOnly) {
+      populateEditor("settings", authState.profileData, authState.username);
+    }
+  }
+
+  function updateAuthState(payload) {
+    authState.signedIn = Boolean(payload?.signedIn);
+    authState.username = payload?.username || null;
+    authState.profileData = authState.signedIn
+      ? normalizeProfileData(payload.profileData, authState.username)
+      : null;
+    updateAuthButton();
+    if (!authState.signedIn) {
+      uiState.trackingEnabled = false;
+      setTrackButtonState(false);
+    }
+  }
+
+  async function refreshAuthState() {
+    try {
+      const payload = await fetchJson("/api/auth/me", { method: "GET" });
+      updateAuthState(payload);
+    } catch {
+      updateAuthState({ signedIn: false });
     }
   }
 
   async function submitAuth() {
-    errorEl.textContent = "";
+    clearAuthError();
+    const username = usernameInput.value.trim();
+    const password = passwordInput.value;
+
+    if (!username || !password) {
+      authError.textContent = "Please enter both a username and password.";
+      return;
+    }
+
+    const payload = { username, password, remember: rememberCheckbox.checked };
+    if (uiState.authMode === "signup") {
+      payload.profileData = getEditorProfileData("signup", username);
+    }
 
     try {
-      const endpoint = authMode === "signup" ? "/api/auth/signup" : "/api/auth/signin";
-      const payload = {
-        username: usernameEl.value,
-        password: passwordEl.value
-      };
-
-      if (authMode === "signup") {
-        payload.profileData = getEditorProfileData("site-auth");
-      }
-
-      const result = await fetchJson(endpoint, {
+      const response = await fetchJson(`/api/auth/${uiState.authMode}`, {
         method: "POST",
         body: JSON.stringify(payload)
       });
-
-      authState = {
-        signedIn: Boolean(result.signedIn),
-        username: result.username || null,
-        profileData: normalizeProfileData(result.profileData || {}, result.username || usernameEl.value)
-      };
-      updateAuthButton();
-      updateTrackButtons();
-      closeMenu();
+      updateAuthState(response);
+      hideModal();
       runPendingActionAfterAuth();
     } catch (error) {
-      errorEl.textContent = error.message;
+      authError.textContent = error.message || "That request could not be completed.";
     }
   }
 
   async function saveSettings() {
-    settingsErrorEl.textContent = "";
+    clearSettingsError();
+    setSkipPromptPreference(settingsSkipCheckbox.checked);
+
+    if (!authState.signedIn) {
+      hideModal();
+      return;
+    }
 
     try {
-      const result = await fetchJson("/api/auth/profile", {
+      const response = await fetchJson("/api/auth/profile", {
         method: "POST",
         body: JSON.stringify({
-          profileData: getEditorProfileData("site-settings")
+          profileData: getEditorProfileData("settings", authState.username)
         })
       });
-
-      authState = {
-        signedIn: Boolean(result.signedIn),
-        username: result.username || authState.username,
-        profileData: normalizeProfileData(result.profileData || {}, result.username || authState.username)
-      };
-      updateAuthButton();
+      updateAuthState(response);
       hideModal();
     } catch (error) {
-      settingsErrorEl.textContent = error.message;
+      settingsError.textContent = error.message || "Could not save settings.";
     }
   }
 
   async function signOut() {
     try {
-      await fetchJson("/api/auth/signout", {
-        method: "POST",
-        body: JSON.stringify({})
-      });
+      await fetchJson("/api/auth/signout", { method: "POST", body: JSON.stringify({}) });
     } catch {
-      // keep UI moving even if the request fails
+      // Keep the UI responsive even if the network request fails.
     }
 
-    authState = { signedIn: false, username: null, profileData: null };
-    trackingEnabled = false;
-    updateAuthButton();
-    updateTrackButtons();
+    updateAuthState({ signedIn: false });
     closeMenu();
-    hideModal();
   }
 
   function handlePhotoSelection(prefix, file) {
-    const targetErrorEl = prefix === "site-settings" ? settingsErrorEl : errorEl;
-    targetErrorEl.textContent = "";
-
     if (!file) {
       return;
     }
 
-    if (!file.type.startsWith("image/")) {
-      targetErrorEl.textContent = "Please choose an image file.";
-      return;
-    }
-
-    if (file.size > 180000) {
-      targetErrorEl.textContent = "That photo is too large. Use an image under about 180 KB.";
-      return;
-    }
-
     const reader = new FileReader();
-    reader.onload = () => {
-      const result = typeof reader.result === "string" ? reader.result : "";
-      setStoredPhotoValue(prefix, result);
+    reader.addEventListener("load", () => {
+      setStoredPhotoValue(prefix, typeof reader.result === "string" ? reader.result : "");
       setEditorMode(prefix, "photo");
-      updateEditorPreview(prefix);
-    };
+      updateEditorPreview(prefix, prefix === "settings" ? authState.username : usernameInput.value.trim());
+    });
     reader.readAsDataURL(file);
   }
 
   function wireAvatarEditor(prefix) {
-    const editor = prefix === "site-settings" ? settingsEditor : authEditor;
+    const container = shell.querySelector(`[data-avatar-editor='${prefix}']`);
+    if (!container) {
+      return;
+    }
 
-    editor.wrapper.addEventListener("click", (event) => {
-      const target = event.target instanceof HTMLElement ? event.target : null;
-      if (!target) {
+    container.addEventListener("click", (event) => {
+      const target = event.target;
+      if (!(target instanceof HTMLElement)) {
         return;
       }
 
-      const modeButton = target.closest("[data-avatar-mode]");
+      const modeButton = target.closest(`.site-avatar-mode[data-avatar-prefix='${prefix}']`);
       if (modeButton instanceof HTMLElement) {
         setEditorMode(prefix, modeButton.dataset.avatarMode || "initials");
-        updateEditorPreview(prefix);
         return;
       }
 
-      const colorButton = target.closest("[data-avatar-color]");
+      const colorButton = target.closest(`.site-avatar-color[data-avatar-prefix='${prefix}']`);
       if (colorButton instanceof HTMLElement) {
-        setSelectedColor(prefix, colorButton.dataset.avatarColor || "#6a86c7");
-        updateEditorPreview(prefix);
+        setSelectedColor(prefix, colorButton.dataset.avatarColor || avatarColors[0]);
         return;
       }
 
-      const emojiButton = target.closest("[data-avatar-emoji]");
+      const emojiButton = target.closest(`.site-avatar-emoji[data-avatar-prefix='${prefix}']`);
       if (emojiButton instanceof HTMLElement) {
         setSelectedEmoji(prefix, emojiButton.dataset.avatarEmoji || avatarEmojis[0]);
         setEditorMode(prefix, "emoji");
-        updateEditorPreview(prefix);
       }
     });
 
-    editor.initialsInput.addEventListener("input", () => {
-      editor.initialsInput.value = editor.initialsInput.value.replace(/[^a-z0-9]/gi, "").slice(0, 2).toUpperCase();
-      updateEditorPreview(prefix);
+    container.addEventListener("input", (event) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement && target.id === `${prefix}-avatar-initials`) {
+        target.value = normalizeInitials(target.value, prefix === "settings" ? authState.username : usernameInput.value.trim());
+        updateEditorPreview(prefix, prefix === "settings" ? authState.username : usernameInput.value.trim());
+      }
     });
 
-    editor.photoInput.addEventListener("change", () => {
-      handlePhotoSelection(prefix, editor.photoInput.files && editor.photoInput.files[0]);
+    const photoInput = document.getElementById(`${prefix}-avatar-photo`);
+    photoInput?.addEventListener("change", (event) => {
+      const target = event.target;
+      if (target instanceof HTMLInputElement) {
+        handlePhotoSelection(prefix, target.files?.[0]);
+      }
     });
   }
 
-  wireAvatarEditor("site-auth");
-  wireAvatarEditor("site-settings");
+  function handlePromptDecline() {
+    setSkipPromptPreference(promptSkipCheckbox.checked);
+    const action = uiState.pendingAction;
+    uiState.pendingAction = null;
+    hideModal();
 
-  usernameEl.addEventListener("input", () => {
-    if (authMode !== "signup") {
+    if (action?.type === "link" && action.href) {
+      window.location.href = action.href;
+    }
+  }
+
+  function onPromptableNavigation(event, link) {
+    const href = link.getAttribute("href");
+    if (!href) {
       return;
     }
 
-    if ((authEditor.wrapper.dataset.avatarMode || "initials") !== "initials") {
+    if (authState.signedIn || shouldSkipPrompt()) {
       return;
     }
 
-    if (!authEditor.initialsInput.value.trim() || authEditor.initialsInput.value.trim().length <= 2) {
-      authEditor.initialsInput.value = getDefaultProfileData(usernameEl.value.trim()).avatarValue;
-      updateEditorPreview("site-auth");
+    event.preventDefault();
+    showPrompt({
+      type: "link",
+      href,
+      label: link.dataset.authPromptLabel || gameLabel
+    });
+  }
+
+  function onTrackButtonPress() {
+    if (authState.signedIn) {
+      enableTracking();
+      return;
     }
+
+    if (shouldSkipPrompt()) {
+      uiState.pendingAction = { type: "track" };
+      showAuthForm("signin");
+      return;
+    }
+
+    showPrompt({ type: "track", label: gameLabel });
+  }
+
+  promptLinks.forEach((link) => {
+    link.addEventListener("click", (event) => onPromptableNavigation(event, link));
   });
 
-  authButtonEl.addEventListener("click", () => {
+  trackButtons.forEach((button) => {
+    button.addEventListener("click", onTrackButtonPress);
+  });
+
+  authButton.addEventListener("click", () => {
     if (authState.signedIn) {
-      if (menuOpen) {
+      if (uiState.menuOpen) {
         closeMenu();
       } else {
         openMenu();
@@ -730,62 +891,42 @@
     showAuthForm("signin");
   });
 
-  settingsButtonEl.addEventListener("click", () => {
+  settingsCogButton.addEventListener("click", () => {
     closeMenu();
-    showSettingsView();
+    showSettingsView(!authState.signedIn);
   });
 
-  signoutButtonEl.addEventListener("click", signOut);
+  menuSettingsButton.addEventListener("click", () => {
+    closeMenu();
+    showSettingsView(false);
+  });
 
-  promptSignInEl.addEventListener("click", () => {
-    updateSkipPreference();
+  signoutButton.addEventListener("click", signOut);
+  closeButton.addEventListener("click", hideModal);
+  backdrop.addEventListener("click", hideModal);
+  promptSigninButton.addEventListener("click", () => {
+    setSkipPromptPreference(promptSkipCheckbox.checked);
     showAuthForm("signin");
   });
-
-  promptContinueEl.addEventListener("click", () => {
-    updateSkipPreference();
-    const action = pendingAction;
-    hideModal();
-    if (action && action.type === "link") {
-      window.location.href = action.href;
-    }
+  promptDeclineButton.addEventListener("click", handlePromptDecline);
+  switchButton.addEventListener("click", () => showAuthForm(uiState.authMode === "signin" ? "signup" : "signin"));
+  submitButton.addEventListener("click", submitAuth);
+  settingsSaveButton.addEventListener("click", saveSettings);
+  settingsCancelButton.addEventListener("click", hideModal);
+  forgotButton.addEventListener("click", () => {
+    authError.textContent = "Password reset is not set up yet. Create a new account or contact the site owner for help.";
   });
 
-  submitEl.addEventListener("click", submitAuth);
-  switchButtonEl.addEventListener("click", () => {
-    setAuthMode(authMode === "signup" ? "signin" : "signup");
-  });
-  backEl.addEventListener("click", () => setVisibleView("prompt"));
-  forgotEl.addEventListener("click", () => {
-    errorEl.textContent = "Forgot password is not set up yet.";
-  });
-  settingsSaveEl.addEventListener("click", saveSettings);
-  settingsCancelEl.addEventListener("click", hideModal);
-
-  usernameEl.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      submitAuth();
-    }
-  });
-
-  passwordEl.addEventListener("keydown", (event) => {
-    if (event.key === "Enter") {
-      event.preventDefault();
-      submitAuth();
-    }
-  });
-
-  modalEl.addEventListener("click", (event) => {
-    const target = event.target instanceof HTMLElement ? event.target : null;
-    if (target && target.dataset.authClose === "true") {
+  document.addEventListener("keydown", (event) => {
+    if (event.key === "Escape") {
+      closeMenu();
       hideModal();
     }
   });
 
   document.addEventListener("click", (event) => {
-    const target = event.target instanceof Node ? event.target : null;
-    if (!target) {
+    const target = event.target;
+    if (!(target instanceof Node)) {
       return;
     }
 
@@ -794,53 +935,17 @@
     }
   });
 
-  for (const link of promptLinks) {
-    link.addEventListener("click", (event) => {
-      if (authState.signedIn || shouldSkipPrompt()) {
-        return;
-      }
-
-      event.preventDefault();
-      showPrompt({
-        type: "link",
-        href: link.href,
-        label: link.dataset.authPromptLabel || "This game"
-      });
-    });
-  }
-
-  for (const button of trackButtons) {
-    button.addEventListener("click", () => {
-      if (authState.signedIn) {
-        enableTracking();
-        return;
-      }
-
-      if (shouldSkipPrompt()) {
-        showAuthForm("signin");
-        return;
-      }
-
-      showPrompt({
-        type: "track",
-        label: gameLabel || "This game"
-      });
-    });
-  }
+  wireAvatarEditor("signup");
+  wireAvatarEditor("settings");
+  populateEditor("signup", getDefaultProfileData(""), "");
+  populateEditor("settings", getDefaultProfileData(""), "");
+  setTrackButtonState(false);
+  setSkipPromptPreference(shouldSkipPrompt());
+  refreshAuthState();
 
   window.scoreTracker = {
     notifyScore() {
       scheduleScoreSync();
-    },
-    getState() {
-      return {
-        signedIn: authState.signedIn,
-        username: authState.username,
-        trackingEnabled
-      };
     }
   };
-
-  populateEditor("site-auth", getDefaultProfileData(""), "");
-  refreshAuthState();
 })();
