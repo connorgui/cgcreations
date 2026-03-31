@@ -351,7 +351,8 @@ function getDefaultProfileData(username = '') {
   return {
     avatarType: 'initials',
     avatarValue: String(username || '').slice(0, 2).toUpperCase(),
-    avatarColor: '#6a86c7'
+    avatarColor: '#6a86c7',
+    skipLoginPrompt: false
   };
 }
 
@@ -360,6 +361,7 @@ function sanitizeProfileData(input, username = '') {
   const avatarType = String(input && input.avatarType ? input.avatarType : base.avatarType).trim().toLowerCase();
   const avatarColor = String(input && input.avatarColor ? input.avatarColor : base.avatarColor).trim();
   const avatarValue = String(input && input.avatarValue ? input.avatarValue : base.avatarValue).trim();
+  const skipLoginPrompt = Boolean(input && input.skipLoginPrompt);
 
   if (!/^#[0-9a-f]{6}$/i.test(avatarColor)) {
     const error = new Error('Avatar color must be a 6-digit hex color.');
@@ -382,7 +384,8 @@ function sanitizeProfileData(input, username = '') {
     return {
       avatarType,
       avatarValue: normalizedInitials,
-      avatarColor
+      avatarColor,
+      skipLoginPrompt
     };
   }
 
@@ -396,7 +399,8 @@ function sanitizeProfileData(input, username = '') {
     return {
       avatarType,
       avatarValue,
-      avatarColor
+      avatarColor,
+      skipLoginPrompt
     };
   }
 
@@ -415,7 +419,8 @@ function sanitizeProfileData(input, username = '') {
   return {
     avatarType,
     avatarValue,
-    avatarColor
+    avatarColor,
+    skipLoginPrompt
   };
 }
 

@@ -56,7 +56,8 @@
     return {
       avatarType: "initials",
       avatarValue: normalizeInitials("", username),
-      avatarColor: avatarColors[0]
+      avatarColor: avatarColors[0],
+      skipLoginPrompt: false
     };
   }
 
@@ -72,12 +73,14 @@
     const avatarColor = avatarColors.includes(profileData.avatarColor)
       ? profileData.avatarColor
       : defaults.avatarColor;
+    const skipLoginPrompt = Boolean(profileData.skipLoginPrompt);
 
     if (avatarType === "emoji") {
       return {
         avatarType,
         avatarValue: String(profileData.avatarValue || avatarEmojis[0]),
-        avatarColor
+        avatarColor,
+        skipLoginPrompt
       };
     }
 
@@ -85,14 +88,16 @@
       return {
         avatarType,
         avatarValue: String(profileData.avatarValue),
-        avatarColor
+        avatarColor,
+        skipLoginPrompt
       };
     }
 
     return {
       avatarType: "initials",
       avatarValue: normalizeInitials(profileData.avatarValue, username),
-      avatarColor
+      avatarColor,
+      skipLoginPrompt
     };
   }
 
@@ -285,6 +290,10 @@
   }
 
   function shouldSkipPrompt() {
+    if (authState.signedIn) {
+      return Boolean(authState.profileData && authState.profileData.skipLoginPrompt);
+    }
+
     return window.localStorage.getItem(skipPromptKey) === "true";
   }
 
@@ -292,6 +301,9 @@
     window.localStorage.setItem(skipPromptKey, shouldSkip ? "true" : "false");
     document.getElementById("site-auth-prompt-skip").checked = shouldSkip;
     document.getElementById("site-auth-settings-skip").checked = shouldSkip;
+    if (authState.profileData) {
+      authState.profileData.skipLoginPrompt = shouldSkip;
+    }
   }
 
   function showOnly(viewName) {
@@ -513,6 +525,7 @@
       authState.profileData = null;
     }
 
+    setSkipPrompt(shouldSkipPrompt());
     setAuthButton();
   }
 
@@ -548,7 +561,10 @@
 
     const payload = { username, password, remember: rememberCheckbox.checked };
     if (uiState.authMode === "signup") {
-      payload.profileData = currentEditorProfile("signup", username);
+      payload.profileData = {
+        ...currentEditorProfile("signup", username),
+        skipLoginPrompt: shouldSkipPrompt()
+      };
     }
 
     try {
@@ -559,6 +575,7 @@
       authState.signedIn = Boolean(response.signedIn);
       authState.username = response.username || username;
       authState.profileData = normalizeProfileData(response.profileData, authState.username);
+      setSkipPrompt(shouldSkipPrompt());
       setAuthButton();
       closeModal();
       finishPendingAction();
@@ -580,10 +597,14 @@
       const response = await fetchJson("/api/auth/profile", {
         method: "POST",
         body: JSON.stringify({
-          profileData: currentEditorProfile("settings", authState.username)
+          profileData: {
+            ...currentEditorProfile("settings", authState.username),
+            skipLoginPrompt: document.getElementById("site-auth-settings-skip").checked
+          }
         })
       });
       authState.profileData = normalizeProfileData(response.profileData, authState.username);
+      setSkipPrompt(shouldSkipPrompt());
       setAuthButton();
       closeModal();
     } catch (error) {
@@ -604,6 +625,7 @@
     authState.username = null;
     authState.profileData = null;
     uiState.trackingEnabled = false;
+    setSkipPrompt(window.localStorage.getItem(skipPromptKey) === "true");
     setAuthButton();
     accountMenu.classList.add("hidden");
     trackButtons.forEach((button) => {
