@@ -397,6 +397,16 @@
     authAvatar.innerHTML = avatarMarkup(authState.profileData, authState.username, false);
   }
 
+  function emitAuthChange() {
+    window.dispatchEvent(new CustomEvent("site-auth-change", {
+      detail: {
+        signedIn: authState.signedIn,
+        username: authState.username,
+        profileData: authState.profileData
+      }
+    }));
+  }
+
   function collectScore() {
     if (gameKey === "pi-voice-checker") {
       return {
@@ -527,6 +537,7 @@
 
     setSkipPrompt(shouldSkipPrompt());
     setAuthButton();
+    emitAuthChange();
   }
 
   document.getElementById("site-auth-close").addEventListener("click", closeModal);
@@ -577,6 +588,7 @@
       authState.profileData = normalizeProfileData(response.profileData, authState.username);
       setSkipPrompt(shouldSkipPrompt());
       setAuthButton();
+      emitAuthChange();
       closeModal();
       finishPendingAction();
     } catch (error) {
@@ -606,6 +618,7 @@
       authState.profileData = normalizeProfileData(response.profileData, authState.username);
       setSkipPrompt(shouldSkipPrompt());
       setAuthButton();
+      emitAuthChange();
       closeModal();
     } catch (error) {
       document.getElementById("site-auth-settings-error").textContent = error.message || "Could not save settings.";
@@ -627,6 +640,7 @@
     uiState.trackingEnabled = false;
     setSkipPrompt(window.localStorage.getItem(skipPromptKey) === "true");
     setAuthButton();
+    emitAuthChange();
     accountMenu.classList.add("hidden");
     trackButtons.forEach((button) => {
       button.textContent = "Track your score";
@@ -775,6 +789,22 @@
   window.scoreTracker = {
     notifyScore() {
       syncScoreSoon();
+    }
+  };
+
+  window.siteAuth = {
+    openSignIn() {
+      openAuth("signin");
+    },
+    openSettings() {
+      openSettings(!authState.signedIn);
+    },
+    getState() {
+      return {
+        signedIn: authState.signedIn,
+        username: authState.username,
+        profileData: authState.profileData
+      };
     }
   };
 })();

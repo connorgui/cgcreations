@@ -178,6 +178,20 @@ async function initializeDatabase(pool) {
     )
   `);
 
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS homework_items (
+      id BIGSERIAL PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      title TEXT NOT NULL,
+      subject TEXT NOT NULL,
+      due_date DATE,
+      notes TEXT NOT NULL DEFAULT '',
+      completed BOOLEAN NOT NULL DEFAULT FALSE,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
+      updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
   await pool.query(`DELETE FROM user_sessions WHERE expires_at <= NOW()`);
 
   const existingCount = await countDatabaseVisitors(pool);
@@ -583,6 +597,161 @@ async function updateUserProfile(userId, username, profileDataInput) {
   return buildPublicUser(result.rows[0] || null);
 }
 
+function sanitizeHomeworkPayload(input) {
+  const raw = input && typeof input === 'object' ? input : {};
+  const title = String(raw.title || '').trim();
+  const subject = String(raw.subject || '').trim();
+  const notes = String(raw.notes || '').trim();
+  const dueDateRaw = raw.dueDate == null ? '' : String(raw.dueDate).trim();
+  const completed = Boolean(raw.completed);
+
+  if (!title) {
+    const error = new Error('Homework title is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (title.length > 120) {
+    const error = new Error('Homework title is too long.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (!subject) {
+    const error = new Error('Subject is required.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (subject.length > 80) {
+    const error = new Error('Subject is too long.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  if (notes.length > 2000) {
+    const error = new Error('Notes are too long.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  let dueDate = null;
+  if (dueDateRaw) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(dueDateRaw)) {
+      const error = new Error('Due date must use YYYY-MM-DD format.');
+      error.statusCode = 400;
+      throw error;
+    }
+
+    dueDate = dueDateRaw;
+  }
+
+  return {
+    title,
+    subject,
+    notes,
+    dueDate,
+    completed
+  };
+}
+
+function sanitizeHomeworkId(value) {
+  const numericId = Number(value);
+  if (!Number.isInteger(numericId) || numericId <= 0) {
+    const error = new Error('Invalid homework item id.');
+    error.statusCode = 400;
+    throw error;
+  }
+
+  return numericId;
+}
+
+function mapHomeworkRow(row) {
+  return {
+    id: row.id,
+    title: row.title,
+    subject: row.subject,
+    dueDate: row.due_date,
+    notes: row.notes,
+    completed: Boolean(row.completed),
+    createdAt: row.created_at,
+    updatedAt: row.updated_at
+  };
+}
+
+async function listHomeworkItems(userId) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const result = await pool.query(
+    `
+      SELECT id, title, subject, due_date, notes, completed, created_at, updated_at
+      FROM homework_items
+      WHERE user_id = $1
+      ORDER BY completed ASC, due_date ASC NULLS LAST, created_at DESC
+    `,
+    [userId]
+  );
+  return result.rows.map(mapHomeworkRow);
+}
+
+async function createHomeworkItem(userId, input) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const payload = sanitizeHomeworkPayload(input);
+  const result = await pool.query(
+    `
+      INSERT INTO homework_items (user_id, title, subject, due_date, notes, completed, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, NOW())
+      RETURNING id, title, subject, due_date, notes, completed, created_at, updated_at
+    `,
+    [userId, payload.title, payload.subject, payload.dueDate, payload.notes, payload.completed]
+  );
+  return mapHomeworkRow(result.rows[0]);
+}
+
+async function updateHomeworkItem(userId, itemId, input) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const payload = sanitizeHomeworkPayload(input);
+  const result = await pool.query(
+    `
+      UPDATE homework_items
+      SET title = $3,
+          subject = $4,
+          due_date = $5,
+          notes = $6,
+          completed = $7,
+          updated_at = NOW()
+      WHERE user_id = $1 AND id = $2
+      RETURNING id, title, subject, due_date, notes, completed, created_at, updated_at
+    `,
+    [userId, itemId, payload.title, payload.subject, payload.dueDate, payload.notes, payload.completed]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error('Homework item not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+
+  return mapHomeworkRow(result.rows[0]);
+}
+
+async function deleteHomeworkItem(userId, itemId) {
+  ensureDatabaseEnabled();
+  const pool = await getDatabasePool();
+  const result = await pool.query(
+    `DELETE FROM homework_items WHERE user_id = $1 AND id = $2 RETURNING id`,
+    [userId, itemId]
+  );
+
+  if (!result.rows[0]) {
+    const error = new Error('Homework item not found.');
+    error.statusCode = 404;
+    throw error;
+  }
+}
+
 function getContentType(filePath) {
   switch (path.extname(filePath).toLowerCase()) {
     case '.html':
@@ -814,6 +983,55 @@ const server = http.createServer(async (req, res) => {
     } catch (error) {
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
       sendJson(res, statusCode, { error: error.message || 'Failed to handle game score.' });
+      return;
+    }
+
+    sendText(res, 405, 'Method Not Allowed');
+    return;
+  }
+
+  if (pathname === '/api/homework' || pathname.startsWith('/api/homework/')) {
+    try {
+      const user = await getAuthenticatedUser(req);
+      if (!user) {
+        sendJson(res, 401, { error: 'Sign in required.' });
+        return;
+      }
+
+      if (pathname === '/api/homework' && req.method === 'GET') {
+        const items = await listHomeworkItems(user.id);
+        sendJson(res, 200, { items });
+        return;
+      }
+
+      if (pathname === '/api/homework' && req.method === 'POST') {
+        const body = await readRequestBody(req);
+        const parsed = JSON.parse(body || '{}');
+        const item = await createHomeworkItem(user.id, parsed);
+        sendJson(res, 201, { item });
+        return;
+      }
+
+      if (pathname.startsWith('/api/homework/')) {
+        const itemId = sanitizeHomeworkId(pathname.slice('/api/homework/'.length));
+
+        if (req.method === 'PUT') {
+          const body = await readRequestBody(req);
+          const parsed = JSON.parse(body || '{}');
+          const item = await updateHomeworkItem(user.id, itemId, parsed);
+          sendJson(res, 200, { item });
+          return;
+        }
+
+        if (req.method === 'DELETE') {
+          await deleteHomeworkItem(user.id, itemId);
+          sendJson(res, 200, { ok: true });
+          return;
+        }
+      }
+    } catch (error) {
+      const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
+      sendJson(res, statusCode, { error: error.message || 'Failed to handle homework.' });
       return;
     }
 

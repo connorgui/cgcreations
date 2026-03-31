@@ -1,0 +1,119 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Homework Tracker</title>
+  <link rel="stylesheet" href="/styles.css?v=20260331c">
+</head>
+<body>
+  <main class="app">
+    <section class="panel homework-panel">
+      <a class="back-link" href="/index.html">Back to Creations</a>
+      <p class="eyebrow">Study Organizer</p>
+      <h1>Homework Tracker</h1>
+      <p class="intro">
+        Keep assignments in one place, mark them complete, and come back on any signed-in device.
+      </p>
+
+      <section id="homework-auth-gate" class="info homework-auth-gate hidden">
+        <h2>Sign in to save homework</h2>
+        <p class="support-text">
+          Homework is stored with your account, so you can come back to it later from other devices.
+        </p>
+        <div class="actions">
+          <button id="homework-signin-button" type="button">Sign In</button>
+        </div>
+      </section>
+
+      <section id="homework-app" class="hidden">
+        <div class="stats">
+          <article class="stat-card">
+            <span class="stat-label">Assignments</span>
+            <strong id="homework-total-count">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Pending</span>
+            <strong id="homework-pending-count">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Due Soon</span>
+            <strong id="homework-due-soon-count">0</strong>
+          </article>
+          <article class="stat-card">
+            <span class="stat-label">Completed</span>
+            <strong id="homework-completed-count">0</strong>
+          </article>
+        </div>
+
+        <div class="status-wrap">
+          <div id="homework-signal-light" class="signal signal-idle" aria-live="polite"></div>
+          <div class="status-copy">
+            <p class="status-label">Status</p>
+            <p id="homework-status-text" class="status-text">Add your first assignment or review what is due next.</p>
+          </div>
+        </div>
+
+        <section class="info homework-form-panel">
+          <div class="section-head section-head-stack">
+            <h2 id="homework-form-title">Add Assignment</h2>
+            <p class="support-text">Keep titles short, subjects clear, and use notes for anything extra.</p>
+          </div>
+          <div class="homework-form-grid">
+            <label class="form-field" for="homework-title">
+              Assignment Title
+              <input id="homework-title" type="text" maxlength="120" placeholder="Math worksheet 4.2">
+            </label>
+            <label class="form-field" for="homework-subject">
+              Subject
+              <input id="homework-subject" type="text" maxlength="80" placeholder="Math">
+            </label>
+            <label class="form-field" for="homework-due-date">
+              Due Date
+              <input id="homework-due-date" type="date">
+            </label>
+            <label class="form-field homework-complete-toggle" for="homework-completed">
+              <span>Completed</span>
+              <input id="homework-completed" type="checkbox">
+            </label>
+            <label class="form-field homework-notes-field" for="homework-notes">
+              Notes
+              <textarea id="homework-notes" placeholder="Problems 1-12, show work, bring notebook."></textarea>
+            </label>
+          </div>
+          <div class="actions">
+            <button id="homework-save-button" type="button">Save Assignment</button>
+            <button id="homework-clear-button" type="button" class="secondary">Clear Form</button>
+          </div>
+        </section>
+
+        <section class="info">
+          <div class="section-head">
+            <div>
+              <h2>Your Homework</h2>
+              <p class="support-text">Filter the list to focus on what is due next.</p>
+            </div>
+            <div class="homework-filter-row" role="tablist" aria-label="Homework filters">
+              <button id="homework-filter-all" type="button" class="secondary is-selected">All</button>
+              <button id="homework-filter-pending" type="button" class="secondary">Pending</button>
+              <button id="homework-filter-due-soon" type="button" class="secondary">Due Soon</button>
+              <button id="homework-filter-completed" type="button" class="secondary">Completed</button>
+            </div>
+          </div>
+          <div id="homework-empty-state" class="homework-empty-state hidden">
+            <p class="support-text">No assignments match this filter yet.</p>
+          </div>
+          <div id="homework-list" class="homework-list"></div>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="/homework-tracker.js?v=20260331a"></script>
+  <script src="/analytics.js?v=20260307a"></script>
+  <script src="/auth-ui.js?v=20260331f"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>

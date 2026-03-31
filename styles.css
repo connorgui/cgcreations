@@ -880,6 +880,12 @@ textarea {
   box-shadow: 0 16px 30px rgba(47, 107, 63, 0.24);
 }
 
+.homework-icon {
+  background: linear-gradient(135deg, #3c8f9a 0%, #28597a 100%);
+  color: #f2fbff;
+  box-shadow: 0 16px 30px rgba(40, 89, 122, 0.24);
+}
+
 .number-info-icon {
   background: linear-gradient(135deg, #6a86c7 0%, #2f4f8c 100%);
   color: #eef4ff;
@@ -975,6 +981,119 @@ textarea {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
   gap: 16px;
+}
+
+.homework-panel {
+  width: min(900px, 100%);
+}
+
+.homework-auth-gate {
+  margin-top: 24px;
+}
+
+.homework-form-panel,
+.homework-list {
+  margin-top: 18px;
+}
+
+.homework-form-grid {
+  display: grid;
+  grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
+  gap: 16px;
+  margin-top: 18px;
+}
+
+.homework-notes-field {
+  grid-column: 1 / -1;
+}
+
+.homework-complete-toggle {
+  display: flex;
+  align-items: center;
+  justify-content: space-between;
+  padding: 14px 18px;
+  border: 1px solid rgba(31, 41, 51, 0.18);
+  border-radius: 20px;
+  background: rgba(255, 255, 255, 0.9);
+}
+
+.homework-complete-toggle input {
+  width: auto;
+}
+
+.homework-filter-row {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+}
+
+.homework-filter-row .is-selected,
+button.secondary.is-selected {
+  background: #2f6b3f;
+  color: #f8fff8;
+}
+
+.homework-list {
+  display: grid;
+  gap: 16px;
+}
+
+.homework-item {
+  padding: 18px 20px;
+  border-radius: 24px;
+  background: rgba(255, 255, 255, 0.88);
+  border: 1px solid rgba(206, 173, 144, 0.8);
+  box-shadow: var(--card-shadow);
+}
+
+.homework-item.is-complete {
+  opacity: 0.84;
+}
+
+.homework-item-head {
+  display: flex;
+  justify-content: space-between;
+  gap: 16px;
+  align-items: start;
+}
+
+.homework-item h3 {
+  margin-top: 6px;
+  font-size: 1.35rem;
+}
+
+.homework-due-pill {
+  display: inline-flex;
+  align-items: center;
+  justify-content: center;
+  padding: 8px 12px;
+  border-radius: 999px;
+  background: rgba(221, 208, 192, 0.95);
+  color: #6f6257;
+  font-weight: 700;
+  white-space: nowrap;
+}
+
+.homework-due-pill.is-urgent {
+  background: rgba(214, 51, 60, 0.16);
+  color: #b4232c;
+}
+
+.homework-notes-copy {
+  margin: 14px 0 0;
+  color: var(--muted);
+  line-height: 1.5;
+}
+
+.homework-item-actions {
+  display: flex;
+  flex-wrap: wrap;
+  gap: 10px;
+  margin-top: 18px;
+}
+
+.homework-empty-state {
+  padding: 18px 0 4px;
 }
 
 .number-info-panel {
