@@ -232,7 +232,7 @@
     <section id="site-auth-prompt-view" hidden>
       <p class="eyebrow">Heads up</p>
       <h2 id="site-auth-title">Sign in for better tracking</h2>
-      <p class="support-text">This game requires sign in for better usage. Continue?</p>
+      <p class="support-text">This game works better when you're signed in so it can save your score and settings.</p>
       <label class="site-auth-checkbox">
         <input id="site-auth-prompt-skip" type="checkbox">
         Don't show again
