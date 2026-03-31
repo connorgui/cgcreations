@@ -30,6 +30,28 @@ let items = [];
 let selectedFilter = "all";
 let editingId = null;
 
+function normalizeDueDateValue(value) {
+  if (!value) {
+    return "";
+  }
+
+  const raw = String(value).trim();
+  const isoMatch = raw.match(/^(\d{4}-\d{2}-\d{2})/);
+  if (isoMatch) {
+    return isoMatch[1];
+  }
+
+  const parsed = new Date(raw);
+  if (Number.isNaN(parsed.getTime())) {
+    return "";
+  }
+
+  const year = parsed.getFullYear();
+  const month = String(parsed.getMonth() + 1).padStart(2, "0");
+  const day = String(parsed.getDate()).padStart(2, "0");
+  return `${year}-${month}-${day}`;
+}
+
 function setSignal(state) {
   signalEl.classList.remove("signal-idle", "signal-success", "signal-error");
   signalEl.classList.add(`signal-${state}`);
@@ -40,11 +62,12 @@ function setStatus(message) {
 }
 
 function formatDate(dateString) {
-  if (!dateString) {
+  const normalizedDate = normalizeDueDateValue(dateString);
+  if (!normalizedDate) {
     return "No due date";
   }
 
-  const date = new Date(`${dateString}T00:00:00`);
+  const date = new Date(`${normalizedDate}T00:00:00`);
   return date.toLocaleDateString("en-US", {
     month: "short",
     day: "numeric",
@@ -53,13 +76,14 @@ function formatDate(dateString) {
 }
 
 function getDaysUntilDue(dateString) {
-  if (!dateString) {
+  const normalizedDate = normalizeDueDateValue(dateString);
+  if (!normalizedDate) {
     return null;
   }
 
   const today = new Date();
   const todayMidnight = new Date(today.getFullYear(), today.getMonth(), today.getDate());
-  const dueDate = new Date(`${dateString}T00:00:00`);
+  const dueDate = new Date(`${normalizedDate}T00:00:00`);
   const differenceMs = dueDate.getTime() - todayMidnight.getTime();
   return Math.round(differenceMs / (1000 * 60 * 60 * 24));
 }
@@ -87,6 +111,13 @@ function getFilteredItems() {
   }
 
   return items;
+}
+
+function normalizeHomeworkItem(item) {
+  return {
+    ...item,
+    dueDate: normalizeDueDateValue(item.dueDate)
+  };
 }
 
 function updateFilterButtons() {
@@ -228,11 +259,12 @@ async function saveItem(payload, useCurrentEditingId = true) {
     method,
     body: JSON.stringify(body)
   });
+  const normalizedItem = normalizeHomeworkItem(response.item);
 
   if (itemId) {
-    items = items.map((item) => item.id === response.item.id ? response.item : item);
+    items = items.map((item) => item.id === normalizedItem.id ? normalizedItem : item);
   } else {
-    items.unshift(response.item);
+    items.unshift(normalizedItem);
   }
 
   updateStats();
@@ -249,7 +281,7 @@ async function loadHomework() {
 
   try {
     const response = await fetchJson("/api/homework", { method: "GET" });
-    items = response.items || [];
+    items = (response.items || []).map(normalizeHomeworkItem);
     updateStats();
     renderList();
     setSignal(items.length ? "idle" : "success");
