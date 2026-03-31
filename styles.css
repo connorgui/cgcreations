@@ -140,6 +140,7 @@ body {
   display: grid;
   place-items: center;
   pointer-events: auto;
+  padding: 16px;
 }
 
 .site-auth-modal[hidden] {
@@ -157,12 +158,15 @@ body {
   position: relative;
   z-index: 1;
   width: min(560px, calc(100vw - 32px));
+  max-height: calc(100vh - 32px);
   padding: 22px;
   border-radius: 30px;
   background: rgba(255, 255, 255, 0.08);
   border: 1px solid rgba(255, 255, 255, 0.14);
   box-shadow: 0 30px 70px rgba(17, 10, 36, 0.34);
   backdrop-filter: blur(10px);
+  overflow-y: auto;
+  overscroll-behavior: contain;
 }
 
 .site-auth-close {
@@ -360,6 +364,56 @@ body {
   border-radius: 22px;
   background: rgba(255, 255, 255, 0.1);
   border: 1px solid rgba(255, 255, 255, 0.14);
+}
+
+@media (max-height: 900px) {
+  .site-auth-card {
+    padding: 18px;
+    max-height: calc(100vh - 20px);
+  }
+
+  .site-auth-hero {
+    padding: 20px;
+  }
+
+  .site-auth-form-shell {
+    padding-top: 12px;
+  }
+
+  .site-avatar-editor {
+    margin-top: 14px;
+    padding: 14px;
+  }
+}
+
+@media (max-height: 760px) {
+  .site-auth-modal {
+    align-items: start;
+    padding: 12px;
+  }
+
+  .site-auth-card {
+    width: min(560px, calc(100vw - 24px));
+    max-height: calc(100vh - 24px);
+    border-radius: 24px;
+    padding: 16px;
+  }
+
+  .site-auth-hero {
+    border-radius: 20px;
+    padding: 18px;
+  }
+
+  .site-auth-hero-copy {
+    margin-bottom: 14px;
+  }
+
+  .site-auth-field,
+  .site-auth-row,
+  .site-auth-form-actions,
+  .site-avatar-editor {
+    margin-top: 12px;
+  }
 }
 
 .site-avatar-preview-wrap {
