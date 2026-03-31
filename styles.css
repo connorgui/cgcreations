@@ -210,6 +210,10 @@ body {
   color: #ffd4e0;
 }
 
+.site-auth-error.is-success {
+  color: #d7ffe0;
+}
+
 .site-auth-hero {
   position: relative;
   overflow: hidden;

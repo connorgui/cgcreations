@@ -147,6 +147,8 @@ async function initializeDatabase(pool) {
     CREATE TABLE IF NOT EXISTS app_users (
       id BIGSERIAL PRIMARY KEY,
       username TEXT NOT NULL UNIQUE,
+      email TEXT UNIQUE,
+      email_verified BOOLEAN NOT NULL DEFAULT FALSE,
       password_salt TEXT NOT NULL,
       password_hash TEXT NOT NULL,
       profile_data JSONB NOT NULL DEFAULT '{"avatarType":"initials","avatarValue":"","avatarColor":"#6a86c7"}'::jsonb,
@@ -160,9 +162,35 @@ async function initializeDatabase(pool) {
   `);
 
   await pool.query(`
+    ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS email TEXT
+  `);
+
+  await pool.query(`
+    ALTER TABLE app_users
+    ADD COLUMN IF NOT EXISTS email_verified BOOLEAN NOT NULL DEFAULT FALSE
+  `);
+
+  await pool.query(`
+    CREATE UNIQUE INDEX IF NOT EXISTS app_users_email_unique
+    ON app_users (email)
+    WHERE email IS NOT NULL
+  `);
+
+  await pool.query(`
     CREATE TABLE IF NOT EXISTS user_sessions (
       token TEXT PRIMARY KEY,
       user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      expires_at TIMESTAMPTZ NOT NULL,
+      created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
+    )
+  `);
+
+  await pool.query(`
+    CREATE TABLE IF NOT EXISTS email_verification_tokens (
+      token TEXT PRIMARY KEY,
+      user_id BIGINT NOT NULL REFERENCES app_users(id) ON DELETE CASCADE,
+      email TEXT NOT NULL,
       expires_at TIMESTAMPTZ NOT NULL,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
@@ -193,6 +221,7 @@ async function initializeDatabase(pool) {
   `);
 
   await pool.query(`DELETE FROM user_sessions WHERE expires_at <= NOW()`);
+  await pool.query(`DELETE FROM email_verification_tokens WHERE expires_at <= NOW()`);
 
   const existingCount = await countDatabaseVisitors(pool);
   if (existingCount > 0) {
@@ -446,6 +475,8 @@ function buildPublicUser(row) {
   return {
     id: row.id,
     username: row.username,
+    email: row.email || null,
+    emailVerified: Boolean(row.email_verified),
     profileData: sanitizeProfileData(row.profile_data || {}, row.username)
   };
 }
@@ -489,7 +520,7 @@ async function createUserAccount(username, password, profileDataInput = {}) {
 
   try {
     const result = await pool.query(
-      `INSERT INTO app_users (username, password_salt, password_hash, profile_data) VALUES ($1, $2, $3, $4::jsonb) RETURNING id, username, profile_data`,
+      `INSERT INTO app_users (username, password_salt, password_hash, profile_data) VALUES ($1, $2, $3, $4::jsonb) RETURNING id, username, email, email_verified, profile_data`,
       [normalizedUsername, salt, hash, JSON.stringify(profileData)]
     );
     return buildPublicUser(result.rows[0]);
@@ -503,13 +534,13 @@ async function createUserAccount(username, password, profileDataInput = {}) {
   }
 }
 
-async function findUserByUsername(username) {
+async function findUserByLoginIdentifier(identifier) {
   ensureDatabaseEnabled();
   const pool = await getDatabasePool();
-  const normalizedUsername = normalizeUsername(username);
+  const normalizedIdentifier = normalizeUsername(identifier);
   const result = await pool.query(
-    `SELECT id, username, password_salt, password_hash, profile_data FROM app_users WHERE username = $1`,
-    [normalizedUsername]
+    `SELECT id, username, email, email_verified, password_salt, password_hash, profile_data FROM app_users WHERE username = $1`,
+    [normalizedIdentifier]
   );
   return result.rows[0] || null;
 }
@@ -540,7 +571,7 @@ async function getAuthenticatedUser(req) {
   const pool = await getDatabasePool();
   const result = await pool.query(
     `
-      SELECT app_users.id, app_users.username, app_users.profile_data, user_sessions.token
+      SELECT app_users.id, app_users.username, app_users.email, app_users.email_verified, app_users.profile_data, user_sessions.token
       FROM user_sessions
       JOIN app_users ON app_users.id = user_sessions.user_id
       WHERE user_sessions.token = $1 AND user_sessions.expires_at > NOW()
@@ -591,7 +622,7 @@ async function updateUserProfile(userId, username, profileDataInput) {
   const pool = await getDatabasePool();
   const profileData = sanitizeProfileData(profileDataInput, username);
   const result = await pool.query(
-    `UPDATE app_users SET profile_data = $2::jsonb WHERE id = $1 RETURNING id, username, profile_data`,
+    `UPDATE app_users SET profile_data = $2::jsonb WHERE id = $1 RETURNING id, username, email, email_verified, profile_data`,
     [userId, JSON.stringify(profileData)]
   );
   return buildPublicUser(result.rows[0] || null);
@@ -863,6 +894,8 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, {
         signedIn: Boolean(user),
         username: user ? user.username : null,
+        email: user ? user.email : null,
+        emailVerified: user ? user.emailVerified : false,
         profileData: user ? user.profileData : null
       });
     } catch (error) {
@@ -878,7 +911,13 @@ const server = http.createServer(async (req, res) => {
       const user = await createUserAccount(parsed.username, parsed.password, parsed.profileData || {});
       const token = await createSessionForUser(user.id);
       setSessionCookie(res, token);
-      sendJson(res, 201, { signedIn: true, username: user.username, profileData: user.profileData });
+      sendJson(res, 201, {
+        signedIn: true,
+        username: user.username,
+        email: user.email || null,
+        emailVerified: Boolean(user.emailVerified),
+        profileData: user.profileData
+      });
     } catch (error) {
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
       sendJson(res, statusCode, { error: error.message || 'Failed to create account.' });
@@ -891,7 +930,7 @@ const server = http.createServer(async (req, res) => {
       const body = await readRequestBody(req);
       const parsed = JSON.parse(body || '{}');
       const { normalizedUsername, password } = validateCredentials(parsed.username, parsed.password);
-      const user = await findUserByUsername(normalizedUsername);
+      const user = await findUserByLoginIdentifier(normalizedUsername);
 
       if (!user) {
         sendJson(res, 401, { error: 'Username or password is incorrect.' });
@@ -906,7 +945,13 @@ const server = http.createServer(async (req, res) => {
 
       const token = await createSessionForUser(user.id);
       setSessionCookie(res, token);
-      sendJson(res, 200, { signedIn: true, username: user.username, profileData: sanitizeProfileData(user.profile_data || {}, user.username) });
+      sendJson(res, 200, {
+        signedIn: true,
+        username: user.username,
+        email: user.email || null,
+        emailVerified: Boolean(user.email_verified),
+        profileData: sanitizeProfileData(user.profile_data || {}, user.username)
+      });
     } catch (error) {
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
       sendJson(res, statusCode, { error: error.message || 'Failed to sign in.' });
@@ -928,6 +973,8 @@ const server = http.createServer(async (req, res) => {
       sendJson(res, 200, {
         signedIn: true,
         username: updatedUser.username,
+        email: updatedUser.email,
+        emailVerified: updatedUser.emailVerified,
         profileData: updatedUser.profileData
       });
     } catch (error) {
@@ -1101,4 +1148,5 @@ server.listen(port, async () => {
   if (!ipinfoToken) {
     console.log('IP geolocation logging is disabled. Set IPINFO_TOKEN to log visitor countries.');
   }
+
 });

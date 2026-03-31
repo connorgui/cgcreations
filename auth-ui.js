@@ -209,14 +209,14 @@
             <h2 id="site-auth-auth-heading" class="site-auth-hero-title">Login</h2>
             <p id="site-auth-auth-copy" class="site-auth-hero-copy">Save your scores, carry your profile across devices, and keep your tracking settings.</p>
             <label class="site-auth-field" for="site-auth-username">
-              Username
+              <span id="site-auth-identifier-label">Username</span>
               <input id="site-auth-username" type="text" autocomplete="username" placeholder="Username">
             </label>
             <label class="site-auth-field" for="site-auth-password">
               Password
               <input id="site-auth-password" type="password" autocomplete="current-password" placeholder="Password">
             </label>
-            <div class="site-auth-row">
+            <div id="site-auth-remember-row" class="site-auth-row">
               <label class="site-auth-checkbox site-auth-checkbox-inline">
                 <input id="site-auth-remember" type="checkbox">
                 Remember me
@@ -270,6 +270,8 @@
   const usernameInput = document.getElementById("site-auth-username");
   const passwordInput = document.getElementById("site-auth-password");
   const rememberCheckbox = document.getElementById("site-auth-remember");
+  const rememberRow = document.getElementById("site-auth-remember-row");
+  const identifierLabel = document.getElementById("site-auth-identifier-label");
   const authHeading = document.getElementById("site-auth-auth-heading");
   const authCopy = document.getElementById("site-auth-auth-copy");
   const switchLabel = document.getElementById("site-auth-switch-label");
@@ -277,18 +279,38 @@
   const authError = document.getElementById("site-auth-error");
   const signupEditorWrap = document.getElementById("site-auth-signup-editor");
 
-  function fetchJson(url, options) {
-    return window.fetch(url, {
+  async function fetchJson(url, options) {
+    const response = await window.fetch(url, {
       credentials: "same-origin",
       headers: { "Content-Type": "application/json" },
       ...options
-    }).then(async (response) => {
-      const payload = await response.json().catch(() => ({}));
-      if (!response.ok) {
-        throw new Error(payload.error || "Request failed.");
-      }
-      return payload;
     });
+    const rawText = await response.text();
+    let payload = {};
+    if (rawText) {
+      try {
+        payload = JSON.parse(rawText);
+      } catch {
+        payload = {};
+      }
+    }
+    if (!response.ok) {
+      const fallbackMessage = rawText
+        ? rawText.replace(/<[^>]+>/g, " ").replace(/\s+/g, " ").trim()
+        : `Request failed (${response.status}).`;
+      throw new Error(payload.error || fallbackMessage || `Request failed (${response.status}).`);
+    }
+    return payload;
+  }
+
+  function clearAuthMessage() {
+    authError.textContent = "";
+    authError.classList.remove("is-success");
+  }
+
+  function setAuthMessage(message, kind) {
+    authError.textContent = message || "";
+    authError.classList.toggle("is-success", kind === "success");
   }
 
   function shouldSkipPrompt() {
@@ -339,7 +361,7 @@
     promptView.classList.add("hidden");
     authView.classList.add("hidden");
     settingsView.classList.add("hidden");
-    authError.textContent = "";
+    clearAuthMessage();
     document.getElementById("site-auth-settings-error").textContent = "";
   }
 
@@ -497,15 +519,21 @@
 
   function openAuth(mode) {
     uiState.authMode = mode;
-    authError.textContent = "";
-    authHeading.textContent = mode === "signup" ? "Create Account" : "Login";
+    clearAuthMessage();
+    const signingUp = mode === "signup";
+    authHeading.textContent = signingUp ? "Create Account" : "Login";
     authCopy.textContent = mode === "signup"
       ? "Create an account to track your score, save your profile picture, and keep your settings."
       : "Save your scores, carry your profile across devices, and keep your tracking settings.";
-    submitButton.textContent = mode === "signup" ? "Create Account" : "Login";
-    switchLabel.textContent = mode === "signup" ? "Already have an account?" : "Don't have an account?";
-    document.getElementById("site-auth-switch-button").textContent = mode === "signup" ? "Sign In" : "Register";
-    signupEditorWrap.classList.toggle("hidden", mode !== "signup");
+    submitButton.textContent = signingUp ? "Create Account" : "Login";
+    switchLabel.textContent = signingUp ? "Already have an account?" : "Don't have an account?";
+    document.getElementById("site-auth-switch-button").textContent = signingUp ? "Sign In" : "Register";
+    signupEditorWrap.classList.toggle("hidden", !signingUp);
+    rememberRow.classList.toggle("hidden", false);
+    identifierLabel.textContent = "Username";
+    usernameInput.placeholder = "Username";
+    usernameInput.autocomplete = "username";
+    passwordInput.autocomplete = signingUp ? "new-password" : "current-password";
     if (!usernameInput.value) {
       const remembered = getRememberedAuth();
       rememberCheckbox.checked = remembered.remember;
@@ -513,7 +541,7 @@
         usernameInput.value = remembered.username;
       }
     }
-    if (mode === "signup") {
+    if (signingUp) {
       populateEditor("signup", defaultProfileData(usernameInput.value.trim()), usernameInput.value.trim());
     }
     showOnly("auth");
@@ -586,14 +614,14 @@
     openAuth(uiState.authMode === "signin" ? "signup" : "signin");
   });
   document.getElementById("site-auth-forgot-button").addEventListener("click", () => {
-    authError.textContent = "Password reset is not set up yet.";
+    setAuthMessage("Password reset is not set up yet.");
   });
   document.getElementById("site-auth-submit").addEventListener("click", async () => {
-    authError.textContent = "";
+    clearAuthMessage();
     const username = usernameInput.value.trim();
     const password = passwordInput.value;
     if (!username || !password) {
-      authError.textContent = "Please enter both a username and password.";
+      setAuthMessage("Please enter both a username and password.");
       return;
     }
 
@@ -620,7 +648,7 @@
       closeModal();
       finishPendingAction();
     } catch (error) {
-      authError.textContent = error.message || "That request could not be completed.";
+      setAuthMessage(error.message || "That request could not be completed.");
     }
   });
 
