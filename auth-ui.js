@@ -1,5 +1,7 @@
 (function () {
   const skipPromptKey = "cg_skip_sign_in_prompt";
+  const rememberMeKey = "cg_remember_me";
+  const rememberedUsernameKey = "cg_remembered_username";
   const body = document.body;
   if (!body) {
     return;
@@ -297,6 +299,24 @@
     return window.localStorage.getItem(skipPromptKey) === "true";
   }
 
+  function getRememberedAuth() {
+    return {
+      remember: window.localStorage.getItem(rememberMeKey) === "true",
+      username: window.localStorage.getItem(rememberedUsernameKey) || ""
+    };
+  }
+
+  function setRememberedAuth(remember, username) {
+    if (remember) {
+      window.localStorage.setItem(rememberMeKey, "true");
+      window.localStorage.setItem(rememberedUsernameKey, username || "");
+      return;
+    }
+
+    window.localStorage.setItem(rememberMeKey, "false");
+    window.localStorage.removeItem(rememberedUsernameKey);
+  }
+
   function setSkipPrompt(shouldSkip) {
     window.localStorage.setItem(skipPromptKey, shouldSkip ? "true" : "false");
     document.getElementById("site-auth-prompt-skip").checked = shouldSkip;
@@ -486,6 +506,13 @@
     switchLabel.textContent = mode === "signup" ? "Already have an account?" : "Don't have an account?";
     document.getElementById("site-auth-switch-button").textContent = mode === "signup" ? "Sign In" : "Register";
     signupEditorWrap.classList.toggle("hidden", mode !== "signup");
+    if (!usernameInput.value) {
+      const remembered = getRememberedAuth();
+      rememberCheckbox.checked = remembered.remember;
+      if (remembered.remember && remembered.username) {
+        usernameInput.value = remembered.username;
+      }
+    }
     if (mode === "signup") {
       populateEditor("signup", defaultProfileData(usernameInput.value.trim()), usernameInput.value.trim());
     }
@@ -583,6 +610,7 @@
         method: "POST",
         body: JSON.stringify(payload)
       });
+      setRememberedAuth(rememberCheckbox.checked, username);
       authState.signedIn = Boolean(response.signedIn);
       authState.username = response.username || username;
       authState.profileData = normalizeProfileData(response.profileData, authState.username);
@@ -782,6 +810,13 @@
   });
 
   setSkipPrompt(shouldSkipPrompt());
+  {
+    const remembered = getRememberedAuth();
+    rememberCheckbox.checked = remembered.remember;
+    if (remembered.remember && remembered.username) {
+      usernameInput.value = remembered.username;
+    }
+  }
   populateEditor("signup", defaultProfileData(""), "");
   populateEditor("settings", defaultProfileData(""), "");
   refreshAuth();
