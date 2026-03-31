@@ -575,13 +575,14 @@
     document.getElementById("site-auth-settings-skip").checked = shouldSkipPrompt();
     const editorWrap = document.getElementById("site-auth-settings-editor-wrap");
     const dangerZone = document.getElementById("site-auth-danger-zone");
-    document.getElementById("site-auth-settings-heading").textContent = prefOnly ? "Reminder Settings" : "Account Settings";
-    document.getElementById("site-auth-settings-copy").textContent = prefOnly
-      ? "Choose whether the sign-in message appears before score-tracked games."
-      : "Change your profile picture and whether the sign-in message appears.";
-    editorWrap.classList.toggle("hidden", prefOnly);
-    dangerZone.classList.toggle("hidden", prefOnly || !authState.signedIn);
-    if (!prefOnly) {
+    const shouldShowAccountSettings = !prefOnly && authState.signedIn;
+    document.getElementById("site-auth-settings-heading").textContent = shouldShowAccountSettings ? "Account Settings" : "Reminder Settings";
+    document.getElementById("site-auth-settings-copy").textContent = shouldShowAccountSettings
+      ? "Change your profile picture and whether the sign-in message appears."
+      : "Choose whether the sign-in message appears before score-tracked games.";
+    editorWrap.classList.toggle("hidden", !shouldShowAccountSettings);
+    dangerZone.classList.toggle("hidden", !shouldShowAccountSettings);
+    if (shouldShowAccountSettings) {
       populateEditor("settings", authState.profileData, authState.username);
     }
     showOnly("settings");
