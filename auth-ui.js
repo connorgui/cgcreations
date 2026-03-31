@@ -339,6 +339,16 @@
   const settingsCancelButton = document.getElementById("site-auth-settings-cancel");
   const settingsError = document.getElementById("site-auth-settings-error");
 
+  [promptView, authView, settingsView].forEach((view) => {
+    if (!view) {
+      return;
+    }
+
+    view.hidden = false;
+    view.classList.add("hidden");
+    view.setAttribute("aria-hidden", "true");
+  });
+
   function getStoredPhotoValue(prefix) {
     const input = document.getElementById(`${prefix}-avatar-photo`);
     return input?.dataset.photoValue || "";
@@ -462,9 +472,12 @@
   function showModal(viewName) {
     uiState.modalView = viewName;
     modal.hidden = false;
-    promptView.hidden = viewName !== "prompt";
-    authView.hidden = viewName !== "auth";
-    settingsView.hidden = viewName !== "settings";
+    promptView?.classList.toggle("hidden", viewName !== "prompt");
+    authView?.classList.toggle("hidden", viewName !== "auth");
+    settingsView?.classList.toggle("hidden", viewName !== "settings");
+    promptView?.setAttribute("aria-hidden", String(viewName !== "prompt"));
+    authView?.setAttribute("aria-hidden", String(viewName !== "auth"));
+    settingsView?.setAttribute("aria-hidden", String(viewName !== "settings"));
     menu.hidden = true;
     uiState.menuOpen = false;
   }
@@ -472,6 +485,12 @@
   function hideModal() {
     modal.hidden = true;
     uiState.modalView = null;
+    promptView?.classList.add("hidden");
+    authView?.classList.add("hidden");
+    settingsView?.classList.add("hidden");
+    promptView?.setAttribute("aria-hidden", "true");
+    authView?.setAttribute("aria-hidden", "true");
+    settingsView?.setAttribute("aria-hidden", "true");
     clearAuthError();
     clearSettingsError();
   }
