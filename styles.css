@@ -142,6 +142,10 @@ body {
   pointer-events: auto;
 }
 
+.site-auth-modal[hidden] {
+  display: none !important;
+}
+
 .site-auth-backdrop {
   position: absolute;
   inset: 0;
