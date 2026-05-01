@@ -65,7 +65,7 @@ let listening = false;
 let shouldResume = false;
 let manualStopRequested = false;
 let restartTimeoutId = null;
-let mobileSingleDigitTimeoutId = null;
+let transcriptCommitTimeoutId = null;
 let bestTranscriptCandidate = "";
 let bestTranscriptDigitCount = 0;
 let correctCount = 0;
@@ -80,10 +80,10 @@ function clearRestartTimeout() {
   }
 }
 
-function clearMobileSingleDigitTimeout() {
-  if (mobileSingleDigitTimeoutId !== null) {
-    window.clearTimeout(mobileSingleDigitTimeoutId);
-    mobileSingleDigitTimeoutId = null;
+function clearTranscriptCommitTimeout() {
+  if (transcriptCommitTimeoutId !== null) {
+    window.clearTimeout(transcriptCommitTimeoutId);
+    transcriptCommitTimeoutId = null;
   }
 }
 
@@ -228,25 +228,38 @@ function clearTranscriptCandidate() {
   bestTranscriptDigitCount = 0;
 }
 
-function processSingleDigitCandidateSoon() {
-  if (!isMobile || heardFinalResultThisSession || bestTranscriptDigitCount !== 1 || !bestTranscriptCandidate) {
+function commitBestTranscriptCandidate() {
+  if (!bestTranscriptCandidate) {
+    return false;
+  }
+
+  const processed = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
+  clearTranscriptCandidate();
+  if (processed && !processed.ignored && isMobile) {
+    heardFinalResultThisSession = true;
+  }
+  return Boolean(processed && !processed.ignored);
+}
+
+function scheduleTranscriptCommit() {
+  if (!bestTranscriptCandidate) {
     return;
   }
 
-  clearMobileSingleDigitTimeout();
-  mobileSingleDigitTimeoutId = window.setTimeout(() => {
-    mobileSingleDigitTimeoutId = null;
+  if (isMobile && heardFinalResultThisSession) {
+    return;
+  }
 
-    if (!listening || heardFinalResultThisSession || bestTranscriptDigitCount !== 1 || !bestTranscriptCandidate) {
+  clearTranscriptCommitTimeout();
+  transcriptCommitTimeoutId = window.setTimeout(() => {
+    transcriptCommitTimeoutId = null;
+
+    if (!bestTranscriptCandidate || (isMobile && heardFinalResultThisSession)) {
       return;
     }
 
-    const processed = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
-    if (processed && !processed.ignored) {
-      heardFinalResultThisSession = true;
-      clearTranscriptCandidate();
-    }
-  }, 325);
+    commitBestTranscriptCandidate();
+  }, isMobile ? 325 : 450);
 }
 
 function getPrimaryTranscript(result) {
@@ -346,13 +359,8 @@ function submitTranscript(transcript, options = {}) {
 }
 
 function processBestTranscriptCandidate() {
-  if (!bestTranscriptCandidate) {
-    return false;
-  }
-
-  const result = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
-  clearTranscriptCandidate();
-  return Boolean(result && !result.ignored);
+  clearTranscriptCommitTimeout();
+  return commitBestTranscriptCandidate();
 }
 
 function startListening() {
@@ -361,7 +369,7 @@ function startListening() {
   }
 
   clearRestartTimeout();
-  clearMobileSingleDigitTimeout();
+  clearTranscriptCommitTimeout();
   manualStopRequested = false;
   shouldResume = true;
   try {
@@ -380,7 +388,7 @@ function stopListening() {
   }
 
   clearRestartTimeout();
-  clearMobileSingleDigitTimeout();
+  clearTranscriptCommitTimeout();
   manualStopRequested = true;
   shouldResume = false;
   if (listening) {
@@ -421,7 +429,7 @@ function initRecognition() {
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
-    clearMobileSingleDigitTimeout();
+    clearTranscriptCommitTimeout();
     clearTranscriptCandidate();
     updateListenButton();
     if (!hasResultToDisplay) {
@@ -438,7 +446,7 @@ function initRecognition() {
 
     if (manualStopRequested) {
       manualStopRequested = false;
-      clearMobileSingleDigitTimeout();
+      clearTranscriptCommitTimeout();
       clearTranscriptCandidate();
       clearDisplayedResult();
       setStatus("Listening stopped.");
@@ -513,32 +521,19 @@ function initRecognition() {
       if (transcript && (!isMobile || !heardFinalResultThisSession)) {
         rememberTranscriptCandidate(transcript);
         previewTranscript(transcript);
-        if (isMobile && !result.isFinal) {
-          if (bestTranscriptDigitCount === 1) {
-            processSingleDigitCandidateSoon();
-          } else {
-            clearMobileSingleDigitTimeout();
-          }
-        }
+        scheduleTranscriptCommit();
       }
 
       if (!result.isFinal) {
         continue;
       }
 
-      clearMobileSingleDigitTimeout();
-
       if (isMobile && heardFinalResultThisSession) {
         continue;
       }
 
-      const finalTranscript = transcript || primaryTranscript;
-      const processed = submitTranscript(finalTranscript, { ignoreUnrecognized: true });
-      if (processed && !processed.ignored) {
-        heardFinalResultThisSession = true;
-        clearTranscriptCandidate();
-      } else if (finalTranscript) {
-        previewTranscript(finalTranscript);
+      if (transcript) {
+        scheduleTranscriptCommit();
       }
     }
   };
