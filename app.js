@@ -66,6 +66,9 @@ let shouldResume = false;
 let manualStopRequested = false;
 let restartTimeoutId = null;
 let transcriptCommitTimeoutId = null;
+let micStream = null;
+let micWarmupPromise = null;
+let audioCaptureActive = false;
 let bestTranscriptCandidate = "";
 let bestTranscriptDigitCount = 0;
 let correctCount = 0;
@@ -99,6 +102,33 @@ function setSignal(state) {
 function clearDisplayedResult() {
   hasResultToDisplay = false;
   setSignal("idle");
+}
+
+async function ensureMicrophoneReady() {
+  if (micStream) {
+    return micStream;
+  }
+
+  if (!navigator.mediaDevices?.getUserMedia) {
+    return null;
+  }
+
+  if (micWarmupPromise) {
+    return micWarmupPromise;
+  }
+
+  micWarmupPromise = navigator.mediaDevices
+    .getUserMedia({ audio: true })
+    .then((stream) => {
+      micStream = stream;
+      return stream;
+    })
+    .catch(() => null)
+    .finally(() => {
+      micWarmupPromise = null;
+    });
+
+  return micWarmupPromise;
 }
 
 function previewTranscript(transcript) {
@@ -372,14 +402,22 @@ function startListening() {
   clearTranscriptCommitTimeout();
   manualStopRequested = false;
   shouldResume = true;
-  try {
-    recognition.start();
-  } catch (error) {
-    shouldResume = false;
-    hasResultToDisplay = true;
-    setSignal("error");
-    setStatus(`Could not start speech recognition: ${error.message}.`);
+  audioCaptureActive = false;
+  if (!hasResultToDisplay) {
+    setSignal("idle");
   }
+  setStatus("Starting microphone. Wait for the ready message, then say your digits.");
+
+  ensureMicrophoneReady().finally(() => {
+    try {
+      recognition.start();
+    } catch (error) {
+      shouldResume = false;
+      hasResultToDisplay = true;
+      setSignal("error");
+      setStatus(`Could not start speech recognition: ${error.message}.`);
+    }
+  });
 }
 
 function stopListening() {
@@ -429,6 +467,7 @@ function initRecognition() {
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
+    audioCaptureActive = false;
     clearTranscriptCommitTimeout();
     clearTranscriptCandidate();
     updateListenButton();
@@ -436,12 +475,25 @@ function initRecognition() {
       setSignal("idle");
     }
     if (!hasResultToDisplay) {
-      setStatus("Listening for your next digit or group of digits.");
+      setStatus("Microphone starting. Wait for the ready message, then say your next digit or group of digits.");
     }
+  };
+
+  recognition.onaudiostart = () => {
+    audioCaptureActive = true;
+    if (!hasResultToDisplay) {
+      setSignal("idle");
+      setStatus("Microphone ready. Say your next digit or group of digits.");
+    }
+  };
+
+  recognition.onaudioend = () => {
+    audioCaptureActive = false;
   };
 
   recognition.onend = () => {
     listening = false;
+    audioCaptureActive = false;
     updateListenButton();
 
     if (manualStopRequested) {
@@ -500,7 +552,9 @@ function initRecognition() {
     }
 
     if (event.error === "no-speech") {
-      setStatus("No digits detected yet. Waiting for another attempt.");
+      setStatus(audioCaptureActive
+        ? "Microphone ready. No digits detected yet."
+        : "Microphone still getting ready. Wait for the ready message, then try again.");
       if (!hasResultToDisplay) {
         setSignal("idle");
       }
