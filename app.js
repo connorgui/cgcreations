@@ -102,6 +102,16 @@ function clearDisplayedResult() {
   setSignal("idle");
 }
 
+function previewTranscript(transcript) {
+  const normalizedTranscript = normalizeTranscript(transcript);
+  if (!normalizedTranscript || hasResultToDisplay) {
+    return;
+  }
+
+  setSignal("idle");
+  setStatus(`Hearing: ${normalizedTranscript}`);
+}
+
 function formatPiDigits(digits) {
   if (!digits) {
     return "-";
@@ -285,6 +295,10 @@ function pickBestTranscriptFromResult(result) {
   return bestOption;
 }
 
+function getPrimaryTranscript(result) {
+  return normalizeTranscript(result?.[0]?.transcript ?? "");
+}
+
 function applyDigits(digits) {
   const consumedDigits = [];
   let incorrectDigit = null;
@@ -450,13 +464,6 @@ function initRecognition() {
   supportTextEl.textContent =
     "Works best in Chrome or Edge with microphone access enabled. The app checks the strongest transcript it hears, including alternate speech matches, to reduce missed digits.";
 
-  const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
-  if (SpeechGrammarList) {
-    const grammarList = new SpeechGrammarList();
-    grammarList.addFromString("#JSGF V1.0; grammar digits; public <digit> = zero | oh | o | owe | one | won | two | to | too | three | tree | free | four | for | fore | five | six | seven | eight | ate | nine | double | triple ;", 1);
-    recognition.grammars = grammarList;
-  }
-
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
@@ -546,11 +553,13 @@ function initRecognition() {
   recognition.onresult = (event) => {
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
+      const primaryTranscript = getPrimaryTranscript(result);
       const bestOption = pickBestTranscriptFromResult(result);
-      const transcript = bestOption?.transcript ?? "";
+      const transcript = bestOption?.transcript || primaryTranscript;
 
       if (transcript && (!isMobile || !heardFinalResultThisSession)) {
         rememberTranscriptCandidate(transcript, bestOption?.confidence ?? -1);
+        previewTranscript(transcript);
         if (isMobile && !result.isFinal) {
           if (bestTranscriptDigitCount === 1) {
             processSingleDigitCandidateSoon();
@@ -570,10 +579,13 @@ function initRecognition() {
         continue;
       }
 
-      const processed = submitTranscript(transcript, { ignoreUnrecognized: true });
+      const finalTranscript = transcript || primaryTranscript;
+      const processed = submitTranscript(finalTranscript, { ignoreUnrecognized: true });
       if (processed && !processed.ignored) {
         heardFinalResultThisSession = true;
         clearTranscriptCandidate();
+      } else if (finalTranscript) {
+        previewTranscript(finalTranscript);
       }
     }
   };
