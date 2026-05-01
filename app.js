@@ -68,7 +68,6 @@ let restartTimeoutId = null;
 let mobileSingleDigitTimeoutId = null;
 let bestTranscriptCandidate = "";
 let bestTranscriptDigitCount = 0;
-let bestTranscriptConfidence = -1;
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
@@ -208,7 +207,7 @@ function extractDigits(transcript) {
   return digits;
 }
 
-function rememberTranscriptCandidate(transcript, confidence = -1) {
+function rememberTranscriptCandidate(transcript) {
   const normalizedTranscript = normalizeTranscript(transcript);
   const digitCount = extractDigits(normalizedTranscript).length;
   if (!digitCount) {
@@ -217,27 +216,16 @@ function rememberTranscriptCandidate(transcript, confidence = -1) {
 
   if (
     digitCount > bestTranscriptDigitCount ||
-    (
-      digitCount === bestTranscriptDigitCount &&
-      (
-        confidence > bestTranscriptConfidence ||
-        (
-          confidence === bestTranscriptConfidence &&
-          normalizedTranscript.length > bestTranscriptCandidate.length
-        )
-      )
-    )
+    (digitCount === bestTranscriptDigitCount && normalizedTranscript.length > bestTranscriptCandidate.length)
   ) {
     bestTranscriptCandidate = normalizedTranscript;
     bestTranscriptDigitCount = digitCount;
-    bestTranscriptConfidence = confidence;
   }
 }
 
 function clearTranscriptCandidate() {
   bestTranscriptCandidate = "";
   bestTranscriptDigitCount = 0;
-  bestTranscriptConfidence = -1;
 }
 
 function processSingleDigitCandidateSoon() {
@@ -259,40 +247,6 @@ function processSingleDigitCandidateSoon() {
       clearTranscriptCandidate();
     }
   }, 325);
-}
-
-function pickBestTranscriptFromResult(result) {
-  let bestOption = null;
-
-  for (let alternativeIndex = 0; alternativeIndex < result.length; alternativeIndex += 1) {
-    const alternative = result[alternativeIndex];
-    const transcript = normalizeTranscript(alternative?.transcript ?? "");
-    const digitCount = extractDigits(transcript).length;
-    const confidence = typeof alternative?.confidence === "number" ? alternative.confidence : -1;
-
-    if (!transcript) {
-      continue;
-    }
-
-    if (
-      !bestOption ||
-      digitCount > bestOption.digitCount ||
-      (
-        digitCount === bestOption.digitCount &&
-        (
-          confidence > bestOption.confidence ||
-          (
-            confidence === bestOption.confidence &&
-            transcript.length > bestOption.transcript.length
-          )
-        )
-      )
-    ) {
-      bestOption = { transcript, digitCount, confidence };
-    }
-  }
-
-  return bestOption;
 }
 
 function getPrimaryTranscript(result) {
@@ -459,10 +413,10 @@ function initRecognition() {
   recognition.lang = "en-US";
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.maxAlternatives = 5;
+  recognition.maxAlternatives = 1;
 
   supportTextEl.textContent =
-    "Works best in Chrome or Edge with microphone access enabled. The app checks the strongest transcript it hears, including alternate speech matches, to reduce missed digits.";
+    "Works best in Chrome or Edge with microphone access enabled. The app listens for short spoken digit bursts and checks them as soon as the browser provides a usable transcript.";
 
   recognition.onstart = () => {
     listening = true;
@@ -554,11 +508,10 @@ function initRecognition() {
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
       const primaryTranscript = getPrimaryTranscript(result);
-      const bestOption = pickBestTranscriptFromResult(result);
-      const transcript = bestOption?.transcript || primaryTranscript;
+      const transcript = primaryTranscript;
 
       if (transcript && (!isMobile || !heardFinalResultThisSession)) {
-        rememberTranscriptCandidate(transcript, bestOption?.confidence ?? -1);
+        rememberTranscriptCandidate(transcript);
         previewTranscript(transcript);
         if (isMobile && !result.isFinal) {
           if (bestTranscriptDigitCount === 1) {
