@@ -4,6 +4,7 @@ const DIGIT_WORDS = {
   zero: "0",
   oh: "0",
   o: "0",
+  owe: "0",
   one: "1",
   won: "1",
   two: "2",
@@ -11,8 +12,10 @@ const DIGIT_WORDS = {
   too: "2",
   three: "3",
   tree: "3",
+  free: "3",
   four: "4",
   for: "4",
+  fore: "4",
   five: "5",
   six: "6",
   seven: "7",
@@ -20,6 +23,25 @@ const DIGIT_WORDS = {
   ate: "8",
   nine: "9"
 };
+
+const REPEAT_WORDS = {
+  double: 2,
+  triple: 3
+};
+
+const IGNORED_TRANSCRIPT_WORDS = new Set([
+  "digit",
+  "digits",
+  "number",
+  "numbers",
+  "pi",
+  "point",
+  "decimal",
+  "the",
+  "a",
+  "an",
+  "and"
+]);
 
 const correctCountEl = document.getElementById("correct-count");
 const wrongCountEl = document.getElementById("wrong-count");
@@ -44,6 +66,7 @@ let manualStopRequested = false;
 let restartTimeoutId = null;
 let bestTranscriptCandidate = "";
 let bestTranscriptDigitCount = 0;
+let bestTranscriptConfidence = -1;
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
@@ -116,8 +139,16 @@ function resetProgress() {
   setStatus("Score reset. Press start and say the first digits of Pi.");
 }
 
+function normalizeTranscript(transcript) {
+  return (transcript || "")
+    .toLowerCase()
+    .replace(/[.,/#!$%^&*;:{}=\-_`~()?\[\]"']/g, " ")
+    .replace(/\s+/g, " ")
+    .trim();
+}
+
 function extractDigits(transcript) {
-  const cleaned = transcript.toLowerCase().trim();
+  const cleaned = normalizeTranscript(transcript);
 
   if (!cleaned) {
     return [];
@@ -126,9 +157,27 @@ function extractDigits(transcript) {
   const tokens = cleaned.match(/[a-z]+|\d+/g) ?? [];
   const digits = [];
 
-  for (const token of tokens) {
+  for (let index = 0; index < tokens.length; index += 1) {
+    const token = tokens[index];
+
     if (/^\d+$/.test(token)) {
       digits.push(...token.split(""));
+      continue;
+    }
+
+    if (IGNORED_TRANSCRIPT_WORDS.has(token)) {
+      continue;
+    }
+
+    if (REPEAT_WORDS[token]) {
+      const nextToken = tokens[index + 1];
+      const repeatedDigit = nextToken
+        ? (DIGIT_WORDS[nextToken] || (/^\d$/.test(nextToken) ? nextToken : null))
+        : null;
+      if (repeatedDigit) {
+        digits.push(...Array(REPEAT_WORDS[token]).fill(repeatedDigit));
+        index += 1;
+      }
       continue;
     }
 
@@ -140,8 +189,8 @@ function extractDigits(transcript) {
   return digits;
 }
 
-function rememberTranscriptCandidate(transcript) {
-  const normalizedTranscript = transcript.trim();
+function rememberTranscriptCandidate(transcript, confidence = -1) {
+  const normalizedTranscript = normalizeTranscript(transcript);
   const digitCount = extractDigits(normalizedTranscript).length;
   if (!digitCount) {
     return;
@@ -149,11 +198,61 @@ function rememberTranscriptCandidate(transcript) {
 
   if (
     digitCount > bestTranscriptDigitCount ||
-    (digitCount === bestTranscriptDigitCount && normalizedTranscript.length > bestTranscriptCandidate.length)
+    (
+      digitCount === bestTranscriptDigitCount &&
+      (
+        confidence > bestTranscriptConfidence ||
+        (
+          confidence === bestTranscriptConfidence &&
+          normalizedTranscript.length > bestTranscriptCandidate.length
+        )
+      )
+    )
   ) {
     bestTranscriptCandidate = normalizedTranscript;
     bestTranscriptDigitCount = digitCount;
+    bestTranscriptConfidence = confidence;
   }
+}
+
+function clearTranscriptCandidate() {
+  bestTranscriptCandidate = "";
+  bestTranscriptDigitCount = 0;
+  bestTranscriptConfidence = -1;
+}
+
+function pickBestTranscriptFromResult(result) {
+  let bestOption = null;
+
+  for (let alternativeIndex = 0; alternativeIndex < result.length; alternativeIndex += 1) {
+    const alternative = result[alternativeIndex];
+    const transcript = normalizeTranscript(alternative?.transcript ?? "");
+    const digitCount = extractDigits(transcript).length;
+    const confidence = typeof alternative?.confidence === "number" ? alternative.confidence : -1;
+
+    if (!transcript) {
+      continue;
+    }
+
+    if (
+      !bestOption ||
+      digitCount > bestOption.digitCount ||
+      (
+        digitCount === bestOption.digitCount &&
+        (
+          confidence > bestOption.confidence ||
+          (
+            confidence === bestOption.confidence &&
+            transcript.length > bestOption.transcript.length
+          )
+        )
+      )
+    ) {
+      bestOption = { transcript, digitCount, confidence };
+    }
+  }
+
+  return bestOption;
 }
 
 function applyDigits(digits) {
@@ -254,8 +353,7 @@ function processBestTranscriptCandidate() {
   }
 
   const result = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
-  bestTranscriptCandidate = "";
-  bestTranscriptDigitCount = 0;
+  clearTranscriptCandidate();
   return Boolean(result && !result.ignored);
 }
 
@@ -315,16 +413,22 @@ function initRecognition() {
   recognition.lang = "en-US";
   recognition.continuous = true;
   recognition.interimResults = true;
-  recognition.maxAlternatives = 1;
+  recognition.maxAlternatives = 5;
 
   supportTextEl.textContent =
-    "Works best in Chrome or Edge with microphone access enabled. On phones, the app waits for each short speaking burst to finish, then checks the best digits it heard.";
+    "Works best in Chrome or Edge with microphone access enabled. The app checks the strongest transcript it hears, including alternate speech matches, to reduce missed digits.";
+
+  const SpeechGrammarList = window.SpeechGrammarList || window.webkitSpeechGrammarList;
+  if (SpeechGrammarList) {
+    const grammarList = new SpeechGrammarList();
+    grammarList.addFromString("#JSGF V1.0; grammar digits; public <digit> = zero | oh | o | owe | one | won | two | to | too | three | tree | free | four | for | fore | five | six | seven | eight | ate | nine | double | triple ;", 1);
+    recognition.grammars = grammarList;
+  }
 
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
-    bestTranscriptCandidate = "";
-    bestTranscriptDigitCount = 0;
+    clearTranscriptCandidate();
     updateListenButton();
     if (!hasResultToDisplay) {
       setSignal("idle");
@@ -340,8 +444,7 @@ function initRecognition() {
 
     if (manualStopRequested) {
       manualStopRequested = false;
-      bestTranscriptCandidate = "";
-      bestTranscriptDigitCount = 0;
+      clearTranscriptCandidate();
       clearDisplayedResult();
       setStatus("Listening stopped.");
       return;
@@ -358,7 +461,7 @@ function initRecognition() {
         if (!listening && shouldResume) {
           startListening();
         }
-      }, 150);
+      }, 80);
       return;
     }
 
@@ -386,7 +489,7 @@ function initRecognition() {
         return;
       }
 
-      setStatus("Listening was interrupted. Restarting if possible.");
+      setStatus("Listening was interrupted. Reconnecting to the microphone.");
       if (!hasResultToDisplay) {
         setSignal("idle");
       }
@@ -409,10 +512,11 @@ function initRecognition() {
   recognition.onresult = (event) => {
     for (let index = event.resultIndex; index < event.results.length; index += 1) {
       const result = event.results[index];
-      const transcript = (result[0]?.transcript ?? "").trim();
+      const bestOption = pickBestTranscriptFromResult(result);
+      const transcript = bestOption?.transcript ?? "";
 
       if (transcript && (!isMobile || !heardFinalResultThisSession)) {
-        rememberTranscriptCandidate(transcript);
+        rememberTranscriptCandidate(transcript, bestOption?.confidence ?? -1);
       }
 
       if (!result.isFinal) {
@@ -426,8 +530,7 @@ function initRecognition() {
       const processed = submitTranscript(transcript, { ignoreUnrecognized: true });
       if (processed && !processed.ignored) {
         heardFinalResultThisSession = true;
-        bestTranscriptCandidate = "";
-        bestTranscriptDigitCount = 0;
+        clearTranscriptCandidate();
       }
     }
   };
