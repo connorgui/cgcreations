@@ -13,6 +13,7 @@ const DIGIT_WORDS = {
   three: "3",
   tree: "3",
   free: "3",
+  see: "3",
   four: "4",
   for: "4",
   fore: "4",
@@ -64,6 +65,7 @@ let listening = false;
 let shouldResume = false;
 let manualStopRequested = false;
 let restartTimeoutId = null;
+let mobileSingleDigitTimeoutId = null;
 let bestTranscriptCandidate = "";
 let bestTranscriptDigitCount = 0;
 let bestTranscriptConfidence = -1;
@@ -76,6 +78,13 @@ function clearRestartTimeout() {
   if (restartTimeoutId !== null) {
     window.clearTimeout(restartTimeoutId);
     restartTimeoutId = null;
+  }
+}
+
+function clearMobileSingleDigitTimeout() {
+  if (mobileSingleDigitTimeoutId !== null) {
+    window.clearTimeout(mobileSingleDigitTimeoutId);
+    mobileSingleDigitTimeoutId = null;
   }
 }
 
@@ -221,6 +230,27 @@ function clearTranscriptCandidate() {
   bestTranscriptConfidence = -1;
 }
 
+function processSingleDigitCandidateSoon() {
+  if (!isMobile || heardFinalResultThisSession || bestTranscriptDigitCount !== 1 || !bestTranscriptCandidate) {
+    return;
+  }
+
+  clearMobileSingleDigitTimeout();
+  mobileSingleDigitTimeoutId = window.setTimeout(() => {
+    mobileSingleDigitTimeoutId = null;
+
+    if (!listening || heardFinalResultThisSession || bestTranscriptDigitCount !== 1 || !bestTranscriptCandidate) {
+      return;
+    }
+
+    const processed = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
+    if (processed && !processed.ignored) {
+      heardFinalResultThisSession = true;
+      clearTranscriptCandidate();
+    }
+  }, 325);
+}
+
 function pickBestTranscriptFromResult(result) {
   let bestOption = null;
 
@@ -363,6 +393,7 @@ function startListening() {
   }
 
   clearRestartTimeout();
+  clearMobileSingleDigitTimeout();
   manualStopRequested = false;
   shouldResume = true;
   try {
@@ -381,6 +412,7 @@ function stopListening() {
   }
 
   clearRestartTimeout();
+  clearMobileSingleDigitTimeout();
   manualStopRequested = true;
   shouldResume = false;
   if (listening) {
@@ -428,6 +460,7 @@ function initRecognition() {
   recognition.onstart = () => {
     listening = true;
     heardFinalResultThisSession = false;
+    clearMobileSingleDigitTimeout();
     clearTranscriptCandidate();
     updateListenButton();
     if (!hasResultToDisplay) {
@@ -444,6 +477,7 @@ function initRecognition() {
 
     if (manualStopRequested) {
       manualStopRequested = false;
+      clearMobileSingleDigitTimeout();
       clearTranscriptCandidate();
       clearDisplayedResult();
       setStatus("Listening stopped.");
@@ -517,11 +551,20 @@ function initRecognition() {
 
       if (transcript && (!isMobile || !heardFinalResultThisSession)) {
         rememberTranscriptCandidate(transcript, bestOption?.confidence ?? -1);
+        if (isMobile && !result.isFinal) {
+          if (bestTranscriptDigitCount === 1) {
+            processSingleDigitCandidateSoon();
+          } else {
+            clearMobileSingleDigitTimeout();
+          }
+        }
       }
 
       if (!result.isFinal) {
         continue;
       }
+
+      clearMobileSingleDigitTimeout();
 
       if (isMobile && heardFinalResultThisSession) {
         continue;
