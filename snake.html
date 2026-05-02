@@ -1,0 +1,92 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Classic Snake</title>
+  <link rel="stylesheet" href="/styles.css?v=20260411a">
+</head>
+<body data-game-key="snake-classic" data-game-label="Classic Snake">
+  <main class="app">
+    <section class="panel game-panel-wide">
+      <a class="back-link" href="/index.html">Back to Creations</a>
+      <p class="eyebrow">Arcade Classic</p>
+      <h1>Classic Snake</h1>
+      <p class="intro">
+        Steer the snake around the grid, eat the food to grow longer, and keep moving without hitting a wall or your own body.
+      </p>
+
+      <div class="stats">
+        <article class="stat-card">
+          <span class="stat-label">Score</span>
+          <strong id="snake-score">0</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">Length</span>
+          <strong id="snake-length">3</strong>
+        </article>
+        <article class="stat-card">
+          <span class="stat-label">State</span>
+          <strong id="snake-state">Ready</strong>
+        </article>
+      </div>
+
+      <div class="spoken-wrap">
+        <span class="spoken-label">Controls</span>
+        <p class="sequence-display">Arrow keys or WASD to steer. Space pauses or resumes. Press R to restart.</p>
+      </div>
+
+      <section class="snake-board-panel">
+        <div class="snake-board-copy">
+          <div>
+            <span class="spoken-label">Game Board</span>
+            <p class="support-text">One food equals one point and one extra segment.</p>
+          </div>
+        </div>
+
+        <div class="snake-board-wrap">
+          <div id="snake-board" class="snake-board" role="img" aria-label="Classic Snake game board"></div>
+        </div>
+
+        <div class="snake-controls" aria-label="Touch controls">
+          <span class="snake-controls-spacer" aria-hidden="true"></span>
+          <button type="button" class="snake-control" data-snake-direction="up" aria-label="Move up">&#8593;</button>
+          <span class="snake-controls-spacer" aria-hidden="true"></span>
+          <button type="button" class="snake-control" data-snake-direction="left" aria-label="Move left">&#8592;</button>
+          <button type="button" class="snake-control" data-snake-direction="down" aria-label="Move down">&#8595;</button>
+          <button type="button" class="snake-control" data-snake-direction="right" aria-label="Move right">&#8594;</button>
+        </div>
+      </section>
+
+      <div class="status-wrap">
+        <div id="snake-signal-light" class="signal signal-idle" aria-live="polite"></div>
+        <div class="status-copy">
+          <p class="status-label">Status</p>
+          <p id="snake-status-text" class="status-text">Press Start Game or use arrow keys or WASD.</p>
+        </div>
+      </div>
+
+      <div class="actions">
+        <button id="snake-start-button" type="button">Start Game</button>
+        <button id="snake-restart-button" type="button" class="secondary">Restart</button>
+        <button type="button" class="secondary" data-track-score="true">Track your score</button>
+      </div>
+
+      <section class="info">
+        <h2>How to Play</h2>
+        <p class="support-text">
+          The snake moves one square at a time in the current direction. Every food pickup adds a point, and the run ends if the head crosses the boundary or touches the snake body.
+        </p>
+      </section>
+    </section>
+  </main>
+
+  <script src="/snake-logic.js?v=20260411a"></script>
+  <script src="/snake.js?v=20260411a"></script>
+  <script src="/analytics.js?v=20260307a"></script>
+  <script src="/auth-ui.js?v=20260331k"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>

@@ -215,9 +215,15 @@ async function initializeDatabase(pool) {
       due_date DATE,
       notes TEXT NOT NULL DEFAULT '',
       completed BOOLEAN NOT NULL DEFAULT FALSE,
+      archived BOOLEAN NOT NULL DEFAULT FALSE,
       created_at TIMESTAMPTZ NOT NULL DEFAULT NOW(),
       updated_at TIMESTAMPTZ NOT NULL DEFAULT NOW()
     )
+  `);
+
+  await pool.query(`
+    ALTER TABLE homework_items
+    ADD COLUMN IF NOT EXISTS archived BOOLEAN NOT NULL DEFAULT FALSE
   `);
 
   await pool.query(`DELETE FROM user_sessions WHERE expires_at <= NOW()`);
@@ -641,6 +647,7 @@ function sanitizeHomeworkPayload(input) {
   const notes = String(raw.notes || '').trim();
   const dueDateRaw = raw.dueDate == null ? '' : String(raw.dueDate).trim();
   const completed = Boolean(raw.completed);
+  const archived = Boolean(raw.archived);
 
   if (!title) {
     const error = new Error('Homework title is required.');
@@ -688,7 +695,8 @@ function sanitizeHomeworkPayload(input) {
     subject,
     notes,
     dueDate,
-    completed
+    completed,
+    archived
   };
 }
 
@@ -711,6 +719,7 @@ function mapHomeworkRow(row) {
     dueDate: row.due_date,
     notes: row.notes,
     completed: Boolean(row.completed),
+    archived: Boolean(row.archived),
     createdAt: row.created_at,
     updatedAt: row.updated_at
   };
@@ -721,10 +730,10 @@ async function listHomeworkItems(userId) {
   const pool = await getDatabasePool();
   const result = await pool.query(
     `
-      SELECT id, title, subject, due_date, notes, completed, created_at, updated_at
+      SELECT id, title, subject, due_date, notes, completed, archived, created_at, updated_at
       FROM homework_items
       WHERE user_id = $1
-      ORDER BY completed ASC, due_date ASC NULLS LAST, created_at DESC
+      ORDER BY archived ASC, completed ASC, due_date ASC NULLS LAST, created_at DESC
     `,
     [userId]
   );
@@ -737,11 +746,11 @@ async function createHomeworkItem(userId, input) {
   const payload = sanitizeHomeworkPayload(input);
   const result = await pool.query(
     `
-      INSERT INTO homework_items (user_id, title, subject, due_date, notes, completed, updated_at)
-      VALUES ($1, $2, $3, $4, $5, $6, NOW())
-      RETURNING id, title, subject, due_date, notes, completed, created_at, updated_at
+      INSERT INTO homework_items (user_id, title, subject, due_date, notes, completed, archived, updated_at)
+      VALUES ($1, $2, $3, $4, $5, $6, $7, NOW())
+      RETURNING id, title, subject, due_date, notes, completed, archived, created_at, updated_at
     `,
-    [userId, payload.title, payload.subject, payload.dueDate, payload.notes, payload.completed]
+    [userId, payload.title, payload.subject, payload.dueDate, payload.notes, payload.completed, payload.archived]
   );
   return mapHomeworkRow(result.rows[0]);
 }
@@ -758,11 +767,12 @@ async function updateHomeworkItem(userId, itemId, input) {
           due_date = $5,
           notes = $6,
           completed = $7,
+          archived = $8,
           updated_at = NOW()
       WHERE user_id = $1 AND id = $2
-      RETURNING id, title, subject, due_date, notes, completed, created_at, updated_at
+      RETURNING id, title, subject, due_date, notes, completed, archived, created_at, updated_at
     `,
-    [userId, itemId, payload.title, payload.subject, payload.dueDate, payload.notes, payload.completed]
+    [userId, itemId, payload.title, payload.subject, payload.dueDate, payload.notes, payload.completed, payload.archived]
   );
 
   if (!result.rows[0]) {

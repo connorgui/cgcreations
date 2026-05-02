@@ -529,6 +529,15 @@ body {
   padding: 18px 18px 10px;
 }
 
+#site-auth-prompt-view.hidden,
+#site-auth-auth-view.hidden,
+#site-auth-settings-view.hidden,
+#site-auth-delete-view.hidden,
+#site-auth-settings-editor-wrap.hidden,
+.site-auth-danger-zone.hidden {
+  display: none !important;
+}
+
 #site-auth-settings-view,
 #site-auth-delete-view {
   display: grid;
@@ -1009,6 +1018,12 @@ textarea {
   box-shadow: 0 16px 30px rgba(47, 79, 140, 0.24);
 }
 
+.snake-icon {
+  background: linear-gradient(135deg, #88a44a 0%, #2f6b3f 100%);
+  color: #f8ffe8;
+  box-shadow: 0 16px 30px rgba(47, 107, 63, 0.24);
+}
+
 .prime-config,
 .prime-question {
   margin-top: 18px;
@@ -1113,6 +1128,10 @@ textarea {
   margin-top: 18px;
 }
 
+.homework-archived-panel {
+  margin-top: 18px;
+}
+
 .homework-form-grid {
   display: grid;
   grid-template-columns: repeat(auto-fit, minmax(220px, 1fr));
@@ -1164,7 +1183,14 @@ button.secondary.is-selected {
 }
 
 .homework-item.is-complete {
-  opacity: 0.84;
+  background: rgba(245, 252, 246, 0.95);
+  border-color: rgba(113, 178, 124, 0.6);
+}
+
+.homework-item.is-archived {
+  background: rgba(247, 245, 240, 0.92);
+  border-color: rgba(182, 168, 148, 0.65);
+  box-shadow: 0 10px 24px rgba(79, 61, 43, 0.08);
 }
 
 .homework-item-head {
@@ -1196,6 +1222,27 @@ button.secondary.is-selected {
   color: #b4232c;
 }
 
+.homework-due-pill.is-overdue {
+  background: rgba(214, 51, 60, 0.14);
+  color: #b4232c;
+}
+
+.homework-due-pill.is-complete {
+  background: rgba(62, 146, 76, 0.16);
+  color: #1f7a34;
+}
+
+.homework-due-pill.is-with-check::before {
+  content: "\2713";
+  margin-right: 6px;
+  font-weight: 800;
+}
+
+.homework-due-pill.is-archived {
+  background: rgba(116, 102, 79, 0.14);
+  color: #6c5a45;
+}
+
 .homework-notes-copy {
   margin: 14px 0 0;
   color: var(--muted);
@@ -1223,6 +1270,83 @@ button.secondary.is-selected {
 
 .number-info-panel .sequence-display {
   margin-top: 10px;
+}
+
+.snake-board-panel {
+  margin-top: 18px;
+  padding: 18px 20px 24px;
+  border-radius: 26px;
+  background: rgba(255, 255, 255, 0.84);
+  border: 1px solid rgba(206, 173, 144, 0.8);
+  box-shadow: var(--card-shadow);
+}
+
+.snake-board-copy {
+  margin-bottom: 14px;
+}
+
+.snake-board-copy .support-text {
+  margin: 6px 0 0;
+}
+
+.snake-board-wrap {
+  width: min(520px, 100%);
+  margin: 0 auto;
+}
+
+.snake-board {
+  --snake-grid-size: 16;
+  display: grid;
+  grid-template-columns: repeat(var(--snake-grid-size), minmax(0, 1fr));
+  gap: 3px;
+  width: 100%;
+  aspect-ratio: 1;
+  padding: 12px;
+  border-radius: 24px;
+  border: 1px solid rgba(185, 161, 142, 0.35);
+  background:
+    linear-gradient(180deg, rgba(255, 255, 255, 0.95), rgba(246, 236, 221, 0.96)),
+    linear-gradient(135deg, rgba(255, 248, 239, 0.92), rgba(241, 230, 214, 0.92));
+}
+
+.snake-cell {
+  border-radius: 6px;
+  background: rgba(255, 255, 255, 0.96);
+  border: 1px solid rgba(191, 168, 143, 0.35);
+}
+
+.snake-cell-snake {
+  background: #6f8f2e;
+  border-color: rgba(47, 107, 63, 0.45);
+}
+
+.snake-cell-head {
+  background: #2f6b3f;
+  border-color: rgba(31, 41, 51, 0.2);
+}
+
+.snake-cell-food {
+  background: #b85c38;
+  border-color: rgba(143, 65, 36, 0.35);
+}
+
+.snake-controls {
+  display: none;
+  grid-template-columns: repeat(3, minmax(64px, 78px));
+  gap: 10px;
+  justify-content: center;
+  margin-top: 18px;
+}
+
+.snake-controls-spacer {
+  visibility: hidden;
+}
+
+.snake-control {
+  min-width: 0;
+  padding: 14px;
+  border-radius: 18px;
+  font-size: 1.15rem;
 }
 .bunny-icon {
   background: linear-gradient(135deg, #ffd7e0 0%, #f6a7b9 100%);
@@ -1417,6 +1541,19 @@ button.secondary.is-selected {
     grid-template-columns: 1fr;
   }
 
+  .snake-board {
+    gap: 2px;
+    padding: 10px;
+  }
+
+  .snake-cell {
+    border-radius: 4px;
+  }
+
+  .snake-controls {
+    display: grid;
+  }
+
   .bunny-stage {
     min-height: 320px;
   }
@@ -1545,6 +1682,12 @@ button.secondary.is-selected {
   .egg-pattern {
     width: 38px;
     height: 52px;
+  }
+}
+
+@media (hover: none), (pointer: coarse) {
+  .snake-controls {
+    display: grid;
   }
 }
 .egg-node.is-peeking.has-real-bunny .egg-bunny-decoy,
