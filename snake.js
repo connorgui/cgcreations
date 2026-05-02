@@ -13,6 +13,7 @@ const {
 } = snakeLogic;
 
 const scoreEl = document.getElementById("snake-score");
+const bestScoreEl = document.getElementById("snake-best-score");
 const lengthEl = document.getElementById("snake-length");
 const stateEl = document.getElementById("snake-state");
 const boardEl = document.getElementById("snake-board");
@@ -34,12 +35,52 @@ const KEY_TO_DIRECTION = {
 };
 
 const TICK_MS = 150;
+const BEST_SCORE_KEY = "snake-best-score";
 
 let state = createInitialState({ gridSize: DEFAULT_GRID_SIZE });
 let cellEls = [];
 let tickIntervalId = null;
 let isRunning = false;
 let isPaused = false;
+let bestScore = 0;
+
+function getStoredBestScore() {
+  const raw = window.localStorage.getItem(BEST_SCORE_KEY);
+  const parsed = Number(raw);
+  return Number.isFinite(parsed) && parsed >= 0 ? parsed : 0;
+}
+
+function persistBestScore(nextBest) {
+  bestScore = Math.max(bestScore, nextBest);
+  window.localStorage.setItem(BEST_SCORE_KEY, String(bestScore));
+}
+
+async function syncBestScoreFromAccount() {
+  const authState = window.siteAuth?.getState?.();
+  if (!authState?.signedIn) {
+    return;
+  }
+
+  try {
+    const response = await window.fetch("/api/game-score/snake-classic", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+
+    if (!response.ok) {
+      return;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    const remoteScore = Number(payload?.scoreData?.score || 0);
+    if (Number.isFinite(remoteScore) && remoteScore > bestScore) {
+      persistBestScore(remoteScore);
+      updateStats();
+    }
+  } catch {
+    // Ignore account score sync failures and keep local best score.
+  }
+}
 
 function cellKey(cell) {
   return `${cell.x},${cell.y}`;
@@ -71,7 +112,11 @@ function getStateLabel() {
 }
 
 function updateStats() {
+  if (state.score > bestScore) {
+    persistBestScore(state.score);
+  }
   scoreEl.textContent = String(state.score);
+  bestScoreEl.textContent = String(bestScore);
   lengthEl.textContent = String(state.snake.length);
   stateEl.textContent = getStateLabel();
   window.scoreTracker?.notifyScore();
@@ -287,12 +332,19 @@ document.addEventListener("keydown", (event) => {
 });
 
 buildBoard();
+bestScore = getStoredBestScore();
 syncUi();
 setStatus("Press Start Game or use arrow keys or WASD.");
+syncBestScoreFromAccount();
+
+window.addEventListener("site-auth-change", () => {
+  syncBestScoreFromAccount();
+});
 
 window.gameScoreApi = {
   getScoreSnapshot: () => ({
     score: state.score,
+    bestScore,
     snakeLength: state.snake.length,
     direction: state.direction,
     food: state.food ? { ...state.food } : null,

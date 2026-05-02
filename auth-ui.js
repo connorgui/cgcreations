@@ -495,6 +495,15 @@
       };
     }
 
+    if (gameKey === "snake-classic") {
+      return {
+        score: Number(document.getElementById("snake-score")?.textContent || 0),
+        bestScore: Number(document.getElementById("snake-best-score")?.textContent || 0),
+        snakeLength: Number(document.getElementById("snake-length")?.textContent || 0),
+        state: document.getElementById("snake-state")?.textContent || "Ready"
+      };
+    }
+
     return null;
   }
 
