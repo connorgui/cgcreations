@@ -14,6 +14,10 @@ const subjectEl = document.getElementById("homework-subject");
 const dueDateEl = document.getElementById("homework-due-date");
 const completedEl = document.getElementById("homework-completed");
 const notesEl = document.getElementById("homework-notes");
+const formToggleEl = document.getElementById("homework-form-toggle");
+const formToggleLabelEl = document.getElementById("homework-form-toggle-label");
+const formToggleIconEl = document.querySelector(".homework-form-toggle-icon");
+const formBodyEl = document.getElementById("homework-form-body");
 const saveButtonEl = document.getElementById("homework-save-button");
 const clearButtonEl = document.getElementById("homework-clear-button");
 const emptyStateEl = document.getElementById("homework-empty-state");
@@ -33,6 +37,7 @@ let items = [];
 let selectedFilter = "all";
 let editingId = null;
 let editingArchived = false;
+let formOpen = false;
 
 function normalizeDueDateValue(value) {
   if (!value) {
@@ -63,6 +68,14 @@ function setSignal(state) {
 
 function setStatus(message) {
   statusEl.textContent = message;
+}
+
+function setFormOpen(nextOpen) {
+  formOpen = Boolean(nextOpen);
+  formBodyEl.classList.toggle("hidden", !formOpen);
+  formToggleEl.classList.toggle("is-open", formOpen);
+  formToggleIconEl.textContent = formOpen ? "−" : "+";
+  formToggleLabelEl.textContent = editingId ? "Edit Assignment" : "Add Assignment";
 }
 
 function formatDate(dateString) {
@@ -229,6 +242,7 @@ function createHomeworkCard(item, options = {}) {
     editingId = item.id;
     editingArchived = item.archived;
     formTitleEl.textContent = "Edit Assignment";
+    setFormOpen(true);
     titleEl.value = item.title;
     subjectEl.value = item.subject;
     dueDateEl.value = item.dueDate || "";
@@ -305,6 +319,7 @@ function resetForm() {
   notesEl.value = "";
   completedEl.checked = false;
   saveButtonEl.textContent = "Save Assignment";
+  setFormOpen(false);
 }
 
 function getPayloadFromForm() {
@@ -422,6 +437,16 @@ clearButtonEl.addEventListener("click", () => {
   resetForm();
   setSignal("idle");
   setStatus("Form cleared.");
+});
+
+formToggleEl.addEventListener("click", () => {
+  const nextOpen = !formOpen;
+  setFormOpen(nextOpen);
+  if (nextOpen) {
+    titleEl.focus();
+  } else if (!editingId) {
+    resetForm();
+  }
 });
 
 signInButtonEl.addEventListener("click", () => {

@@ -1119,12 +1119,58 @@ textarea {
   width: min(900px, 100%);
 }
 
+.homework-stats {
+  grid-template-columns: repeat(5, minmax(0, 1fr));
+  gap: 10px;
+}
+
+.homework-stats .stat-card {
+  padding: 14px 12px;
+  text-align: center;
+}
+
+.homework-stats .stat-label {
+  font-size: 0.8rem;
+}
+
+.homework-stats .stat-card strong {
+  margin-top: 6px;
+  font-size: 1.6rem;
+}
+
 .homework-auth-gate {
   margin-top: 24px;
 }
 
 .homework-form-panel,
 .homework-list {
+  margin-top: 18px;
+}
+
+.homework-form-toggle {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+}
+
+.homework-form-toggle-icon {
+  display: inline-grid;
+  place-items: center;
+  width: 1.3rem;
+  height: 1.3rem;
+  border-radius: 999px;
+  background: rgba(47, 107, 63, 0.12);
+  color: #2f6b3f;
+  font-weight: 800;
+  line-height: 1;
+}
+
+.homework-form-toggle.is-open .homework-form-toggle-icon {
+  background: rgba(120, 84, 43, 0.12);
+  color: #78542b;
+}
+
+.homework-form-body {
   margin-top: 18px;
 }
 
@@ -1258,6 +1304,18 @@ button.secondary.is-selected {
 
 .homework-empty-state {
   padding: 18px 0 4px;
+}
+
+@media (max-width: 900px) {
+  .homework-stats {
+    grid-template-columns: repeat(5, minmax(88px, 1fr));
+  }
+}
+
+@media (max-width: 720px) {
+  .homework-stats {
+    grid-template-columns: repeat(auto-fit, minmax(120px, 1fr));
+  }
 }
 
 .number-info-panel {

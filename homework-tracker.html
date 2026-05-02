@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Homework Tracker</title>
-  <link rel="stylesheet" href="/styles.css?v=20260502a">
+  <link rel="stylesheet" href="/styles.css?v=20260502b">
 </head>
 <body>
   <main class="app">
@@ -27,7 +27,7 @@
       </section>
 
       <section id="homework-app" class="hidden">
-        <div class="stats">
+        <div class="stats homework-stats">
           <article class="stat-card">
             <span class="stat-label">Assignments</span>
             <strong id="homework-total-count">0</strong>
@@ -63,31 +63,37 @@
             <h2 id="homework-form-title">Add Assignment</h2>
             <p class="support-text">Keep titles short, subjects clear, and use notes for anything extra.</p>
           </div>
-          <div class="homework-form-grid">
-            <label class="form-field" for="homework-title">
-              Assignment Title
-              <input id="homework-title" type="text" maxlength="120" placeholder="Math worksheet 4.2">
-            </label>
-            <label class="form-field" for="homework-subject">
-              Subject
-              <input id="homework-subject" type="text" maxlength="80" placeholder="Math">
-            </label>
-            <label class="form-field" for="homework-due-date">
-              Due Date
-              <input id="homework-due-date" type="date">
-            </label>
-            <label class="form-field homework-complete-toggle" for="homework-completed">
-              <span>Completed</span>
-              <input id="homework-completed" type="checkbox">
-            </label>
-            <label class="form-field homework-notes-field" for="homework-notes">
-              Notes
-              <textarea id="homework-notes" placeholder="Problems 1-12, show work, bring notebook."></textarea>
-            </label>
-          </div>
-          <div class="actions">
-            <button id="homework-save-button" type="button">Save Assignment</button>
-            <button id="homework-clear-button" type="button" class="secondary">Clear Form</button>
+          <button id="homework-form-toggle" type="button" class="secondary homework-form-toggle">
+            <span class="homework-form-toggle-icon" aria-hidden="true">+</span>
+            <span id="homework-form-toggle-label">Add Assignment</span>
+          </button>
+          <div id="homework-form-body" class="homework-form-body hidden">
+            <div class="homework-form-grid">
+              <label class="form-field" for="homework-title">
+                Assignment Title
+                <input id="homework-title" type="text" maxlength="120" placeholder="Math worksheet 4.2">
+              </label>
+              <label class="form-field" for="homework-subject">
+                Subject
+                <input id="homework-subject" type="text" maxlength="80" placeholder="Math">
+              </label>
+              <label class="form-field" for="homework-due-date">
+                Due Date
+                <input id="homework-due-date" type="date">
+              </label>
+              <label class="form-field homework-complete-toggle" for="homework-completed">
+                <span>Completed</span>
+                <input id="homework-completed" type="checkbox">
+              </label>
+              <label class="form-field homework-notes-field" for="homework-notes">
+                Notes
+                <textarea id="homework-notes" placeholder="Problems 1-12, show work, bring notebook."></textarea>
+              </label>
+            </div>
+            <div class="actions">
+              <button id="homework-save-button" type="button">Save Assignment</button>
+              <button id="homework-clear-button" type="button" class="secondary">Clear Form</button>
+            </div>
           </div>
         </section>
 
@@ -126,7 +132,7 @@
     </section>
   </main>
 
-  <script src="/homework-tracker.js?v=20260502a"></script>
+  <script src="/homework-tracker.js?v=20260502b"></script>
   <script src="/analytics.js?v=20260307a"></script>
   <script src="/auth-ui.js?v=20260331k"></script>
   <script>
