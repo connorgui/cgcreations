@@ -16,6 +16,8 @@ const currentLevelEl = document.getElementById("study-current-level");
 const questionNumberEl = document.getElementById("study-question-number");
 const correctCountEl = document.getElementById("study-correct-count");
 const wrongCountEl = document.getElementById("study-wrong-count");
+const answeredCountEl = document.getElementById("study-answered-count");
+const bestCorrectEl = document.getElementById("study-best-correct");
 const promptLabelEl = document.getElementById("study-prompt-label");
 const dialogueBlockEl = document.getElementById("study-dialogue-block");
 const wordPromptEl = document.getElementById("study-word-prompt");
@@ -695,13 +697,28 @@ function pickBankQuestion(bankKey, bank, level, builder) {
   return builder(entry);
 }
 
+function buildMixedWrongChoices(bank, level, currentEntry, excludedChoices, preferredCount = 5) {
+  const excluded = new Set((excludedChoices || []).map((choice) => String(choice).trim().toLowerCase()));
+  const ownWrongChoices = Array.isArray(currentEntry.wrongChoices) ? currentEntry.wrongChoices : [];
+  const pooledWrongChoices = bank[level].flatMap((entry) => (
+    entry === currentEntry || !Array.isArray(entry.wrongChoices) ? [] : entry.wrongChoices
+  ));
+
+  const mixedChoices = uniqueItems([...ownWrongChoices, ...shuffle(pooledWrongChoices)]).filter((choice) => {
+    const normalized = String(choice).trim().toLowerCase();
+    return normalized && !excluded.has(normalized);
+  });
+
+  return sample(mixedChoices, Math.min(preferredCount, mixedChoices.length));
+}
+
 function generateSynonymQuestion(level) {
   return pickBankQuestion("synonyms", SYNONYM_BANK, level, (entry) =>
     createQuestion({
       promptLabel: "Word",
       prompt: entry.word,
       correctChoice: entry.correct,
-      wrongChoices: entry.wrongChoices,
+      wrongChoices: buildMixedWrongChoices(SYNONYM_BANK, level, entry, [entry.correct]),
       explanation: entry.explanation,
       defaultStatus: "Choose the answer that is closest in meaning."
     })
@@ -709,17 +726,18 @@ function generateSynonymQuestion(level) {
 }
 
 function generateSentenceCompletionQuestion(level) {
-  return pickBankQuestion("sentence-completion", SENTENCE_COMPLETION_BANK, level, (entry) =>
-    createQuestion({
+  return pickBankQuestion("sentence-completion", SENTENCE_COMPLETION_BANK, level, (entry) => {
+    const correctChoice = randomItem(entry.correctChoices);
+    return createQuestion({
       promptLabel: "Sentence",
       prompt: entry.sentence,
-      correctChoice: randomItem(entry.correctChoices),
-      wrongChoices: entry.wrongChoices,
+      correctChoice,
+      wrongChoices: buildMixedWrongChoices(SENTENCE_COMPLETION_BANK, level, entry, entry.correctChoices),
       explanation: entry.explanation,
       defaultStatus: "Choose the word that best completes the sentence.",
       compactPrompt: true
-    })
-  );
+    });
+  });
 }
 
 function generateGuessTheSentenceQuestion(level) {
@@ -729,7 +747,7 @@ function generateGuessTheSentenceQuestion(level) {
       prompt: entry.prompt,
       dialogue: entry.dialogue,
       correctChoice: entry.correctChoice,
-      wrongChoices: entry.wrongChoices,
+      wrongChoices: buildMixedWrongChoices(GUESS_THE_SENTENCE_BANK, level, entry, [entry.correctChoice]),
       explanation: entry.explanation,
       defaultStatus: "Choose the response that best fits the conversation.",
       compactPrompt: true
@@ -757,7 +775,7 @@ function generateTransitionQuestion(level) {
       promptLabel: "Transition",
       prompt: entry.sentence,
       correctChoice: entry.correctChoice,
-      wrongChoices: entry.wrongChoices,
+      wrongChoices: buildMixedWrongChoices(TRANSITION_BANK, level, entry, [entry.correctChoice]),
       explanation: entry.explanation,
       defaultStatus: "Choose the transition that best completes the idea.",
       compactPrompt: true
@@ -1271,8 +1289,15 @@ let selectedPractice = "synonyms";
 let selectedLevel = "easy";
 let currentQuestion = null;
 let questionLocked = false;
+let bestCorrectCount = 0;
+let accountSyncTimeoutId = null;
+let remoteStateLoaded = false;
 const scoreByPractice = {};
 const questionCounters = {};
+
+const VALID_PRACTICE_KEYS = Object.entries(STUDY_CONTENT).flatMap(([courseKey, courseConfig]) => (
+  Object.keys(courseConfig.practices).map((practiceKey) => `${courseKey}:${practiceKey}`)
+));
 
 function getCourseConfig() {
   return STUDY_CONTENT[selectedCourse];
@@ -1304,6 +1329,153 @@ function setStatus(message) {
   statusEl.textContent = message;
 }
 
+function getTotalCorrectCount() {
+  return Object.values(scoreByPractice).reduce((total, entry) => total + Number(entry?.correct || 0), 0);
+}
+
+function getTotalWrongCount() {
+  return Object.values(scoreByPractice).reduce((total, entry) => total + Number(entry?.wrong || 0), 0);
+}
+
+function getTotalAnsweredCount() {
+  return getTotalCorrectCount() + getTotalWrongCount();
+}
+
+function syncBestCorrectCount() {
+  bestCorrectCount = Math.max(bestCorrectCount, getTotalCorrectCount());
+}
+
+function cloneStudyMap(source, defaultFactory) {
+  const target = {};
+  VALID_PRACTICE_KEYS.forEach((practiceKey) => {
+    if (source && typeof source[practiceKey] === "object" && source[practiceKey] !== null) {
+      target[practiceKey] = defaultFactory(source[practiceKey]);
+    }
+  });
+  return target;
+}
+
+function getStudyScoreData() {
+  syncBestCorrectCount();
+  return {
+    selectedCourse,
+    selectedPractice,
+    selectedLevel,
+    bestCorrectCount,
+    scoreByPractice: cloneStudyMap(scoreByPractice, (entry) => ({
+      correct: Math.max(0, Number(entry.correct) || 0),
+      wrong: Math.max(0, Number(entry.wrong) || 0)
+    })),
+    questionCounters: cloneStudyMap(questionCounters, (entry) => ({
+      easy: Math.max(0, Number(entry.easy) || 0),
+      medium: Math.max(0, Number(entry.medium) || 0),
+      hard: Math.max(0, Number(entry.hard) || 0)
+    }))
+  };
+}
+
+function applyStudyScoreData(scoreData) {
+  const nextCourse = scoreData && typeof scoreData.selectedCourse === "string" && STUDY_CONTENT[scoreData.selectedCourse]
+    ? scoreData.selectedCourse
+    : "reading";
+  const coursePractices = STUDY_CONTENT[nextCourse].practices;
+  const nextPractice = scoreData && typeof scoreData.selectedPractice === "string" && coursePractices[scoreData.selectedPractice]
+    ? scoreData.selectedPractice
+    : Object.keys(coursePractices)[0];
+  const nextLevel = scoreData && LEVEL_ORDER.includes(scoreData.selectedLevel)
+    ? scoreData.selectedLevel
+    : "easy";
+
+  Object.keys(scoreByPractice).forEach((key) => delete scoreByPractice[key]);
+  Object.keys(questionCounters).forEach((key) => delete questionCounters[key]);
+
+  const nextScoreByPractice = cloneStudyMap(scoreData?.scoreByPractice, (entry) => ({
+    correct: Math.max(0, Number(entry.correct) || 0),
+    wrong: Math.max(0, Number(entry.wrong) || 0)
+  }));
+  const nextQuestionCounters = cloneStudyMap(scoreData?.questionCounters, (entry) => ({
+    easy: Math.max(0, Number(entry.easy) || 0),
+    medium: Math.max(0, Number(entry.medium) || 0),
+    hard: Math.max(0, Number(entry.hard) || 0)
+  }));
+
+  Object.assign(scoreByPractice, nextScoreByPractice);
+  Object.assign(questionCounters, nextQuestionCounters);
+
+  selectedCourse = nextCourse;
+  selectedPractice = nextPractice;
+  selectedLevel = nextLevel;
+  bestCorrectCount = Math.max(0, Number(scoreData?.bestCorrectCount) || 0);
+  syncBestCorrectCount();
+}
+
+function scheduleAccountSync() {
+  const authState = window.siteAuth?.getState?.();
+  if (!authState?.signedIn) {
+    return;
+  }
+
+  if (accountSyncTimeoutId !== null) {
+    window.clearTimeout(accountSyncTimeoutId);
+  }
+
+  accountSyncTimeoutId = window.setTimeout(async () => {
+    accountSyncTimeoutId = null;
+    try {
+      await window.fetch("/api/game-score/study-courses", {
+        method: "POST",
+        credentials: "same-origin",
+        headers: {
+          "Content-Type": "application/json"
+        },
+        body: JSON.stringify({ scoreData: getStudyScoreData() })
+      });
+    } catch {
+      // Ignore save errors and keep the local session moving.
+    }
+  }, 300);
+}
+
+async function syncStudyStateFromAccount() {
+  const authState = window.siteAuth?.getState?.();
+  if (!authState?.signedIn) {
+    remoteStateLoaded = true;
+    return;
+  }
+
+  try {
+    const response = await window.fetch("/api/game-score/study-courses", {
+      method: "GET",
+      credentials: "same-origin"
+    });
+
+    if (!response.ok) {
+      remoteStateLoaded = true;
+      return;
+    }
+
+    const payload = await response.json().catch(() => ({}));
+    const remoteScoreData = payload?.scoreData;
+    const localAnswered = getTotalAnsweredCount();
+    const remoteAnswered = Object.values(remoteScoreData?.scoreByPractice || {}).reduce((total, entry) => (
+      total + Math.max(0, Number(entry?.correct) || 0) + Math.max(0, Number(entry?.wrong) || 0)
+    ), 0);
+
+    if (remoteScoreData && remoteAnswered > localAnswered) {
+      applyStudyScoreData(remoteScoreData);
+      renderSelectedState();
+      setSignal("idle");
+      setStatus("Account progress loaded.");
+    } else if (remoteScoreData && localAnswered > remoteAnswered) {
+      scheduleAccountSync();
+    }
+  } catch {
+    // Ignore account sync failures and keep the page usable offline.
+  } finally {
+    remoteStateLoaded = true;
+  }
+}
+
 function updateCourseButtons() {
   Object.entries(COURSE_BUTTONS).forEach(([course, button]) => {
     button.classList.toggle("is-selected", course === selectedCourse);
@@ -1313,12 +1485,16 @@ function updateCourseButtons() {
 function updateStats() {
   const practiceKey = getPracticeKey();
   ensurePracticeState(practiceKey);
+  syncBestCorrectCount();
   currentCourseEl.textContent = titleCase(selectedCourse);
   currentPracticeEl.textContent = getPracticeConfig().title;
   currentLevelEl.textContent = LEVEL_LABELS[selectedLevel];
   questionNumberEl.textContent = String(questionCounters[practiceKey][selectedLevel] + 1);
   correctCountEl.textContent = String(scoreByPractice[practiceKey].correct);
   wrongCountEl.textContent = String(scoreByPractice[practiceKey].wrong);
+  answeredCountEl.textContent = String(getTotalAnsweredCount());
+  bestCorrectEl.textContent = String(bestCorrectCount);
+  window.scoreTracker?.notifyScore?.();
 }
 
 function renderPracticeButtons() {
@@ -1408,28 +1584,38 @@ function renderCurrentQuestion() {
   updateStats();
 }
 
-function showCourse(course) {
-  selectedCourse = course;
-  selectedPractice = Object.keys(getCourseConfig().practices)[0];
-  selectedLevel = "easy";
+function renderSelectedState() {
   updateCourseButtons();
   renderPracticeButtons();
   renderLevelButtons();
   renderCurrentQuestion();
 }
 
+function showCourse(course) {
+  selectedCourse = course;
+  selectedPractice = Object.keys(getCourseConfig().practices)[0];
+  selectedLevel = "easy";
+  renderSelectedState();
+  if (remoteStateLoaded) {
+    scheduleAccountSync();
+  }
+}
+
 function showPractice(practice) {
   selectedPractice = practice;
   selectedLevel = "easy";
-  renderPracticeButtons();
-  renderLevelButtons();
-  renderCurrentQuestion();
+  renderSelectedState();
+  if (remoteStateLoaded) {
+    scheduleAccountSync();
+  }
 }
 
 function showLevel(level) {
   selectedLevel = level;
-  renderLevelButtons();
-  renderCurrentQuestion();
+  renderSelectedState();
+  if (remoteStateLoaded) {
+    scheduleAccountSync();
+  }
 }
 
 function chooseAnswer(index) {
@@ -1464,6 +1650,9 @@ function chooseAnswer(index) {
   }
 
   updateStats();
+  if (remoteStateLoaded) {
+    scheduleAccountSync();
+  }
 }
 
 function nextQuestion() {
@@ -1471,15 +1660,23 @@ function nextQuestion() {
   ensurePracticeState(practiceKey);
   questionCounters[practiceKey][selectedLevel] += 1;
   renderCurrentQuestion();
+  if (remoteStateLoaded) {
+    scheduleAccountSync();
+  }
 }
 
 function resetScore() {
-  const practiceKey = getPracticeKey();
-  scoreByPractice[practiceKey] = { correct: 0, wrong: 0 };
-  questionCounters[practiceKey] = { easy: 0, medium: 0, hard: 0 };
+  VALID_PRACTICE_KEYS.forEach((practiceKey) => {
+    scoreByPractice[practiceKey] = { correct: 0, wrong: 0 };
+    questionCounters[practiceKey] = { easy: 0, medium: 0, hard: 0 };
+  });
+  bestCorrectCount = 0;
   renderCurrentQuestion();
   setSignal("idle");
   setStatus(`${getPracticeConfig().title} score reset. Keep practicing.`);
+  if (remoteStateLoaded) {
+    scheduleAccountSync();
+  }
 }
 
 Object.entries(COURSE_BUTTONS).forEach(([course, button]) => {
@@ -1488,5 +1685,15 @@ Object.entries(COURSE_BUTTONS).forEach(([course, button]) => {
 
 nextQuestionEl.addEventListener("click", nextQuestion);
 resetScoreEl.addEventListener("click", resetScore);
+
+window.addEventListener("site-auth-change", () => {
+  syncStudyStateFromAccount();
+});
+
+window.studyCourses = {
+  getScoreData() {
+    return getStudyScoreData();
+  }
+};
 
 showCourse("reading");

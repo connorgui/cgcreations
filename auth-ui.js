@@ -504,6 +504,21 @@
       };
     }
 
+    if (gameKey === "study-courses") {
+      if (window.studyCourses?.getScoreData) {
+        return window.studyCourses.getScoreData();
+      }
+      return {
+        currentCourse: document.getElementById("study-current-course")?.textContent || "Reading",
+        currentPractice: document.getElementById("study-current-practice")?.textContent || "Synonyms",
+        currentLevel: document.getElementById("study-current-level")?.textContent || "Easy",
+        correctCount: Number(document.getElementById("study-correct-count")?.textContent || 0),
+        wrongCount: Number(document.getElementById("study-wrong-count")?.textContent || 0),
+        answeredCount: Number(document.getElementById("study-answered-count")?.textContent || 0),
+        bestCorrect: Number(document.getElementById("study-best-correct")?.textContent || 0)
+      };
+    }
+
     return null;
   }
 
