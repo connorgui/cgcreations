@@ -640,6 +640,8 @@ function titleCase(value) {
   return value.charAt(0).toUpperCase() + value.slice(1);
 }
 
+const bankDeckState = {};
+
 function createQuestion(config) {
   const selectedWrongChoices = sample(uniqueItems(config.wrongChoices).filter((choice) => choice !== config.correctChoice), 3);
   const choices = shuffle([
@@ -659,13 +661,42 @@ function createQuestion(config) {
   };
 }
 
-function pickBankQuestion(bank, level, builder) {
-  const entry = randomItem(bank[level]);
+function getBankDeckEntry(bankKey, bank, level) {
+  const deckKey = `${bankKey}:${level}`;
+  const entries = bank[level];
+  if (!entries || !entries.length) {
+    return null;
+  }
+
+  let state = bankDeckState[deckKey];
+  if (!state || state.order.length !== entries.length) {
+    state = {
+      order: shuffle(entries.map((_, index) => index)),
+      pointer: 0
+    };
+    bankDeckState[deckKey] = state;
+  }
+
+  if (state.pointer >= state.order.length) {
+    state.order = shuffle(entries.map((_, index) => index));
+    state.pointer = 0;
+  }
+
+  const entry = entries[state.order[state.pointer]];
+  state.pointer += 1;
+  return entry;
+}
+
+function pickBankQuestion(bankKey, bank, level, builder) {
+  const entry = getBankDeckEntry(bankKey, bank, level);
+  if (!entry) {
+    throw new Error(`Missing bank entries for ${bankKey}:${level}`);
+  }
   return builder(entry);
 }
 
 function generateSynonymQuestion(level) {
-  return pickBankQuestion(SYNONYM_BANK, level, (entry) =>
+  return pickBankQuestion("synonyms", SYNONYM_BANK, level, (entry) =>
     createQuestion({
       promptLabel: "Word",
       prompt: entry.word,
@@ -678,7 +709,7 @@ function generateSynonymQuestion(level) {
 }
 
 function generateSentenceCompletionQuestion(level) {
-  return pickBankQuestion(SENTENCE_COMPLETION_BANK, level, (entry) =>
+  return pickBankQuestion("sentence-completion", SENTENCE_COMPLETION_BANK, level, (entry) =>
     createQuestion({
       promptLabel: "Sentence",
       prompt: entry.sentence,
@@ -692,7 +723,7 @@ function generateSentenceCompletionQuestion(level) {
 }
 
 function generateGuessTheSentenceQuestion(level) {
-  return pickBankQuestion(GUESS_THE_SENTENCE_BANK, level, (entry) =>
+  return pickBankQuestion("guess-the-sentence", GUESS_THE_SENTENCE_BANK, level, (entry) =>
     createQuestion({
       promptLabel: "Conversation",
       prompt: entry.prompt,
@@ -707,7 +738,7 @@ function generateGuessTheSentenceQuestion(level) {
 }
 
 function generatePunctuationQuestion(level) {
-  return pickBankQuestion(PUNCTUATION_BANK, level, (entry) =>
+  return pickBankQuestion("punctuation", PUNCTUATION_BANK, level, (entry) =>
     createQuestion({
       promptLabel: "Writing",
       prompt: entry.prompt,
@@ -721,7 +752,7 @@ function generatePunctuationQuestion(level) {
 }
 
 function generateTransitionQuestion(level) {
-  return pickBankQuestion(TRANSITION_BANK, level, (entry) =>
+  return pickBankQuestion("transitions", TRANSITION_BANK, level, (entry) =>
     createQuestion({
       promptLabel: "Transition",
       prompt: entry.sentence,
@@ -735,7 +766,7 @@ function generateTransitionQuestion(level) {
 }
 
 function generateRevisionQuestion(level) {
-  return pickBankQuestion(REVISION_BANK, level, (entry) =>
+  return pickBankQuestion("revision", REVISION_BANK, level, (entry) =>
     createQuestion({
       promptLabel: "Revision",
       prompt: "Which revision is the clearest?",
