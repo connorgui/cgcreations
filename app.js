@@ -47,6 +47,7 @@ const IGNORED_TRANSCRIPT_WORDS = new Set([
 const correctCountEl = document.getElementById("correct-count");
 const wrongCountEl = document.getElementById("wrong-count");
 const nextPositionEl = document.getElementById("next-position");
+const nextExpectedDigitEl = document.getElementById("next-expected-digit");
 const signalLightEl = document.getElementById("signal-light");
 const statusTextEl = document.getElementById("status-text");
 const spokenDigitEl = document.getElementById("spoken-digit");
@@ -157,6 +158,7 @@ function updateScoreboard() {
   correctCountEl.textContent = String(correctCount);
   wrongCountEl.textContent = String(wrongCount);
   nextPositionEl.textContent = String(correctCount + 1);
+  nextExpectedDigitEl.textContent = getExpectedDigit() ?? "-";
   correctSequenceEl.textContent = formatPiDigits(PI_DIGITS.slice(0, correctCount));
   window.scoreTracker?.notifyScore();
 }
@@ -323,7 +325,7 @@ function applyDigits(digits) {
     incrementWrongCount();
     hasResultToDisplay = true;
     setSignal("error");
-    setStatus(`Incorrect at ${incorrectDigit}. Expected ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`);
+    setStatus(`Heard ${incorrectDigit}, but digit ${correctCount + 1} of Pi should be ${expectedDigit}. Accepted ${Math.max(consumedDigits.length - 1, 0)} digit(s) from that phrase.`);
     return {
       ok: false,
       ignored: false,
