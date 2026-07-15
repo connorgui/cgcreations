@@ -1,0 +1,110 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+  <meta charset="UTF-8">
+  <meta name="viewport" content="width=device-width, initial-scale=1.0">
+  <title>Study Courses</title>
+  <link rel="stylesheet" href="/styles.css?v=20260715a">
+</head>
+<body>
+  <main class="app">
+    <section class="panel study-panel">
+      <a class="back-link" href="/index.html">Back to Creations</a>
+      <p class="eyebrow">Study Practice</p>
+      <h1>Study Courses</h1>
+      <p class="intro">
+        Choose a subject, open a practice set, and work through questions at the difficulty level that fits you best.
+      </p>
+
+      <section class="study-shell">
+        <aside class="study-sidebar info">
+          <h2>Choose a Course</h2>
+          <p class="support-text">Start with Reading, or open the Writing and Math sections as more study modes are added.</p>
+          <div class="study-course-grid" role="tablist" aria-label="Study courses">
+            <button id="study-course-reading" type="button" class="study-course-card is-selected">Reading</button>
+            <button id="study-course-writing" type="button" class="study-course-card">Writing</button>
+            <button id="study-course-math" type="button" class="study-course-card">Math</button>
+          </div>
+        </aside>
+
+        <section class="study-main">
+          <section class="info">
+            <div class="section-head section-head-stack">
+              <h2 id="study-subject-title">Reading Practice</h2>
+              <p id="study-subject-copy" class="support-text">Pick a reading skill, then choose a level and begin answering questions.</p>
+            </div>
+
+            <div id="study-practice-grid" class="study-practice-grid" role="tablist" aria-label="Study practices"></div>
+          </section>
+
+          <section class="info">
+            <div class="section-head section-head-stack">
+              <h2 id="study-practice-title">Synonyms</h2>
+              <p id="study-directions" class="support-text">
+                Directions: Each question is followed by four (4) answer choices. Select the answer that is most similar in meaning to the word given.
+              </p>
+            </div>
+
+            <div id="study-level-grid" class="study-level-grid" role="tablist" aria-label="Practice levels"></div>
+
+            <div class="stats study-session-stats">
+              <article class="stat-card">
+                <span class="stat-label">Subject</span>
+                <strong id="study-current-course">Reading</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Practice</span>
+                <strong id="study-current-practice">Synonyms</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Level</span>
+                <strong id="study-current-level">Easy</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Question</span>
+                <strong id="study-question-number">1</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Correct</span>
+                <strong id="study-correct-count">0</strong>
+              </article>
+              <article class="stat-card">
+                <span class="stat-label">Wrong</span>
+                <strong id="study-wrong-count">0</strong>
+              </article>
+            </div>
+
+            <div class="study-question-panel">
+              <p id="study-prompt-label" class="spoken-label">Question</p>
+              <div id="study-dialogue-block" class="study-dialogue hidden" aria-live="polite"></div>
+              <h3 id="study-word-prompt" class="study-word-prompt">bright</h3>
+              <p id="study-question-copy" class="support-text study-question-copy hidden"></p>
+              <div id="study-answer-grid" class="answer-grid"></div>
+            </div>
+
+            <div class="status-wrap">
+              <div id="study-signal-light" class="signal signal-idle" aria-live="polite"></div>
+              <div class="status-copy">
+                <p class="status-label">Result</p>
+                <p id="study-status-text" class="status-text">Choose the best answer for the question shown.</p>
+              </div>
+            </div>
+
+            <div class="actions">
+              <button id="study-next-question" type="button">Next Question</button>
+              <button id="study-reset-score" type="button" class="secondary">Reset Score</button>
+            </div>
+          </section>
+        </section>
+      </section>
+    </section>
+  </main>
+
+  <script src="/study-courses.js?v=20260715a"></script>
+  <script src="/analytics.js?v=20260307a"></script>
+  <script src="/auth-ui.js?v=20260331k"></script>
+  <script>
+    window.siteAnalytics.init();
+  </script>
+</body>
+</html>
