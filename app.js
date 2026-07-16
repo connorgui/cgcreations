@@ -5,13 +5,19 @@ const DIGIT_WORDS = {
   oh: "0",
   o: "0",
   one: "1",
+  won: "1",
   two: "2",
+  to: "2",
+  too: "2",
   three: "3",
   four: "4",
+  for: "4",
+  fore: "4",
   five: "5",
   six: "6",
   seven: "7",
   eight: "8",
+  ate: "8",
   nine: "9"
 };
 
@@ -62,11 +68,12 @@ let micWarmupPromise = null;
 let audioCaptureActive = false;
 let bestTranscriptCandidate = "";
 let bestTranscriptDigitCount = 0;
-let transcriptConsumeLockUntil = 0;
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
 let hasResultToDisplay = false;
+let lastProcessedTranscript = "";
+let lastProcessedAt = 0;
 
 function clearRestartTimeout() {
   if (restartTimeoutId !== null) {
@@ -251,23 +258,34 @@ function clearTranscriptCandidate() {
   bestTranscriptDigitCount = 0;
 }
 
-function setTranscriptConsumeLock(durationMs = 900) {
-  transcriptConsumeLockUntil = Date.now() + durationMs;
+function wasRecentlyProcessed(transcript) {
+  return (
+    transcript &&
+    transcript === lastProcessedTranscript &&
+    Date.now() - lastProcessedAt < 1500
+  );
 }
 
-function isTranscriptConsumeLocked() {
-  return Date.now() < transcriptConsumeLockUntil;
+function rememberProcessedTranscript(transcript) {
+  lastProcessedTranscript = transcript;
+  lastProcessedAt = Date.now();
 }
 
 function commitBestTranscriptCandidate() {
-  if (!bestTranscriptCandidate || isTranscriptConsumeLocked()) {
+  if (!bestTranscriptCandidate) {
     return false;
   }
 
-  const processed = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
+  const transcriptToCommit = bestTranscriptCandidate;
+  if (wasRecentlyProcessed(transcriptToCommit)) {
+    clearTranscriptCandidate();
+    return false;
+  }
+
+  const processed = submitTranscript(transcriptToCommit, { ignoreUnrecognized: true });
   clearTranscriptCandidate();
   if (processed && !processed.ignored) {
-    setTranscriptConsumeLock();
+    rememberProcessedTranscript(transcriptToCommit);
     heardFinalResultThisSession = true;
   }
   return Boolean(processed && !processed.ignored);
@@ -290,8 +308,10 @@ function scheduleTranscriptCommit() {
       return;
     }
 
-    commitBestTranscriptCandidate();
-  }, isMobile ? 325 : 450);
+    if (commitBestTranscriptCandidate() && recognition && listening && shouldResume) {
+      recognition.stop();
+    }
+  }, isMobile ? 700 : 850);
 }
 
 function getPrimaryTranscript(result) {
@@ -405,7 +425,6 @@ function startListening() {
   manualStopRequested = false;
   shouldResume = true;
   audioCaptureActive = false;
-  transcriptConsumeLockUntil = 0;
   if (!hasResultToDisplay) {
     setSignal("idle");
   }
@@ -460,7 +479,7 @@ function initRecognition() {
 
   recognition = new SpeechRecognition();
   recognition.lang = "en-US";
-  recognition.continuous = true;
+  recognition.continuous = false;
   recognition.interimResults = true;
   recognition.maxAlternatives = 1;
 
@@ -471,7 +490,6 @@ function initRecognition() {
     listening = true;
     heardFinalResultThisSession = false;
     audioCaptureActive = false;
-    transcriptConsumeLockUntil = 0;
     clearTranscriptCommitTimeout();
     clearTranscriptCandidate();
     updateListenButton();
@@ -576,17 +594,13 @@ function initRecognition() {
       const primaryTranscript = getPrimaryTranscript(result);
       const transcript = primaryTranscript;
 
-      if (isTranscriptConsumeLocked()) {
-        continue;
-      }
-
       if (transcript && (!isMobile || !heardFinalResultThisSession)) {
         rememberTranscriptCandidate(transcript);
         previewTranscript(transcript);
-        scheduleTranscriptCommit();
       }
 
       if (!result.isFinal) {
+        scheduleTranscriptCommit();
         continue;
       }
 
@@ -595,7 +609,9 @@ function initRecognition() {
       }
 
       if (transcript) {
-        scheduleTranscriptCommit();
+        if (commitBestTranscriptCandidate() && recognition && listening && shouldResume) {
+          recognition.stop();
+        }
       }
     }
   };
