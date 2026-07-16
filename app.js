@@ -62,6 +62,7 @@ let micWarmupPromise = null;
 let audioCaptureActive = false;
 let bestTranscriptCandidate = "";
 let bestTranscriptDigitCount = 0;
+let transcriptConsumeLockUntil = 0;
 let correctCount = 0;
 let wrongCount = 0;
 let heardFinalResultThisSession = false;
@@ -250,14 +251,23 @@ function clearTranscriptCandidate() {
   bestTranscriptDigitCount = 0;
 }
 
+function setTranscriptConsumeLock(durationMs = 900) {
+  transcriptConsumeLockUntil = Date.now() + durationMs;
+}
+
+function isTranscriptConsumeLocked() {
+  return Date.now() < transcriptConsumeLockUntil;
+}
+
 function commitBestTranscriptCandidate() {
-  if (!bestTranscriptCandidate) {
+  if (!bestTranscriptCandidate || isTranscriptConsumeLocked()) {
     return false;
   }
 
   const processed = submitTranscript(bestTranscriptCandidate, { ignoreUnrecognized: true });
   clearTranscriptCandidate();
-  if (processed && !processed.ignored && isMobile) {
+  if (processed && !processed.ignored) {
+    setTranscriptConsumeLock();
     heardFinalResultThisSession = true;
   }
   return Boolean(processed && !processed.ignored);
@@ -395,6 +405,7 @@ function startListening() {
   manualStopRequested = false;
   shouldResume = true;
   audioCaptureActive = false;
+  transcriptConsumeLockUntil = 0;
   if (!hasResultToDisplay) {
     setSignal("idle");
   }
@@ -460,6 +471,7 @@ function initRecognition() {
     listening = true;
     heardFinalResultThisSession = false;
     audioCaptureActive = false;
+    transcriptConsumeLockUntil = 0;
     clearTranscriptCommitTimeout();
     clearTranscriptCandidate();
     updateListenButton();
@@ -563,6 +575,10 @@ function initRecognition() {
       const result = event.results[index];
       const primaryTranscript = getPrimaryTranscript(result);
       const transcript = primaryTranscript;
+
+      if (isTranscriptConsumeLocked()) {
+        continue;
+      }
 
       if (transcript && (!isMobile || !heardFinalResultThisSession)) {
         rememberTranscriptCandidate(transcript);
