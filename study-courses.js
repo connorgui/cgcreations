@@ -44,7 +44,13 @@ const SYNONYM_BANK = {
     { word: "quiet", correct: "silent", wrongChoices: ["crowded", "shallow", "careful", "speedy"], explanation: "Quiet means making little or no sound." },
     { word: "rapid", correct: "fast", wrongChoices: ["plain", "young", "empty", "sleepy"], explanation: "Rapid means fast or quick." },
     { word: "neat", correct: "tidy", wrongChoices: ["messy", "sleepy", "curved", "stormy"], explanation: "Neat often means clean and tidy." },
-    { word: "brave", correct: "bold", wrongChoices: ["soft", "tiny", "late", "careless"], explanation: "Brave and bold both describe someone who shows courage." }
+    { word: "brave", correct: "bold", wrongChoices: ["soft", "tiny", "late", "careless"], explanation: "Brave and bold both describe someone who shows courage." },
+    { word: "honest", correct: "truthful", wrongChoices: ["sleepy", "crooked", "colorful", "narrow"], explanation: "Honest and truthful both mean not lying." },
+    { word: "chilly", correct: "cold", wrongChoices: ["bright", "sticky", "quiet", "round"], explanation: "Chilly means noticeably cold." },
+    { word: "enormous", correct: "huge", wrongChoices: ["tiny", "gentle", "brief", "empty"], explanation: "Enormous and huge both mean very large." },
+    { word: "reply", correct: "answer", wrongChoices: ["wander", "carry", "hide", "build"], explanation: "To reply is to give an answer." },
+    { word: "assist", correct: "help", wrongChoices: ["delay", "watch", "drop", "mix"], explanation: "Assist means to help someone." },
+    { word: "select", correct: "choose", wrongChoices: ["erase", "follow", "explain", "borrow"], explanation: "Select and choose both mean to pick something." }
   ],
   medium: [
     { word: "ancient", correct: "old", wrongChoices: ["active", "gentle", "polite", "sudden"], explanation: "Ancient describes something from a very old time." },
@@ -54,7 +60,13 @@ const SYNONYM_BANK = {
     { word: "drowsy", correct: "sleepy", wrongChoices: ["hungry", "balanced", "common", "timid"], explanation: "Drowsy means sleepy." },
     { word: "scarce", correct: "rare", wrongChoices: ["friendly", "colorful", "steady", "massive"], explanation: "Scarce means hard to find or rare." },
     { word: "fragile", correct: "delicate", wrongChoices: ["simple", "clever", "careful", "silent"], explanation: "Fragile means delicate and easy to break." },
-    { word: "vanish", correct: "disappear", wrongChoices: ["announce", "collect", "improve", "settle"], explanation: "Vanish means to disappear from sight." }
+    { word: "vanish", correct: "disappear", wrongChoices: ["announce", "collect", "improve", "settle"], explanation: "Vanish means to disappear from sight." },
+    { word: "cautious", correct: "careful", wrongChoices: ["reckless", "cheerful", "distant", "ordinary"], explanation: "Cautious means careful about avoiding danger or mistakes." },
+    { word: "essential", correct: "necessary", wrongChoices: ["optional", "ancient", "famous", "fragile"], explanation: "Essential means absolutely necessary." },
+    { word: "observe", correct: "notice", wrongChoices: ["remove", "repeat", "divide", "promise"], explanation: "To observe something is to notice or watch it carefully." },
+    { word: "fortunate", correct: "lucky", wrongChoices: ["serious", "nervous", "common", "strict"], explanation: "Fortunate means lucky or favored by events." },
+    { word: "resist", correct: "oppose", wrongChoices: ["permit", "gather", "predict", "repair"], explanation: "Resist means to oppose or push back against something." },
+    { word: "predict", correct: "forecast", wrongChoices: ["remember", "measure", "ignore", "compare"], explanation: "Predict and forecast both mean to say what may happen." }
   ],
   hard: [
     { word: "covenant", correct: "agreement", wrongChoices: ["club", "law", "habit", "symbol"], explanation: "A covenant is a serious promise or agreement." },
@@ -64,7 +76,13 @@ const SYNONYM_BANK = {
     { word: "impartial", correct: "neutral", wrongChoices: ["excited", "ordinary", "strict", "fortunate"], explanation: "Impartial means neutral and fair." },
     { word: "meticulous", correct: "precise", wrongChoices: ["careless", "timid", "rested", "furious"], explanation: "Meticulous means very careful and precise." },
     { word: "ambiguous", correct: "unclear", wrongChoices: ["bright", "short", "truthful", "gentle"], explanation: "Ambiguous means open to more than one meaning." },
-    { word: "feasible", correct: "possible", wrongChoices: ["fragile", "formal", "urgent", "ancient"], explanation: "Feasible means possible to do." }
+    { word: "feasible", correct: "possible", wrongChoices: ["fragile", "formal", "urgent", "ancient"], explanation: "Feasible means possible to do." },
+    { word: "concise", correct: "brief", wrongChoices: ["uncertain", "decorative", "repeated", "distant"], explanation: "Concise writing is brief while still being clear." },
+    { word: "diligent", correct: "hardworking", wrongChoices: ["careless", "impatient", "fortunate", "silent"], explanation: "Diligent describes someone who works carefully and steadily." },
+    { word: "inevitable", correct: "unavoidable", wrongChoices: ["unlikely", "temporary", "flexible", "hidden"], explanation: "Inevitable means certain to happen and impossible to avoid." },
+    { word: "skeptical", correct: "doubtful", wrongChoices: ["confident", "furious", "generous", "precise"], explanation: "Skeptical means doubtful or not easily convinced." },
+    { word: "resilient", correct: "tough", wrongChoices: ["fragile", "ordinary", "formal", "secret"], explanation: "Resilient means able to recover after difficulty." },
+    { word: "obsolete", correct: "outdated", wrongChoices: ["essential", "modern", "portable", "accurate"], explanation: "Obsolete means no longer current or useful." }
   ]
 };
 
@@ -617,8 +635,22 @@ const REVISION_BANK = {
   ]
 };
 
+const QUESTION_NAME_GROUPS = {
+  female: ["Aria", "Ava", "Chloe", "Elena", "Ella", "Emma", "Grace", "Isla", "Jada", "Layla", "Lena", "Lisa", "Maya", "Mia", "Nina", "Nora", "Olivia", "Priya", "Sofia", "Tessa", "Zoe"],
+  male: ["Aaron", "Ben", "Caleb", "Carl", "Daniel", "Eli", "Ethan", "Evan", "Jalen", "Jay", "Leo", "Liam", "Marcus", "Mateo", "Noah", "Owen", "Sam", "Theo", "Zane"],
+  neutral: ["Alex", "Avery", "Cameron", "Harper", "Jamie", "Jordan", "Quinn", "Riley", "Taylor"]
+};
+
+const QUESTION_NAME_GROUP_BY_SOURCE = Object.fromEntries(
+  Object.entries(QUESTION_NAME_GROUPS).flatMap(([group, names]) => names.map((name) => [name.toLowerCase(), group]))
+);
+
 function randomItem(items) {
   return items[Math.floor(Math.random() * items.length)];
+}
+
+function randomInt(minimum, maximum) {
+  return minimum + Math.floor(Math.random() * (maximum - minimum + 1));
 }
 
 function shuffle(items) {
@@ -643,6 +675,111 @@ function titleCase(value) {
 }
 
 const bankDeckState = {};
+const optionDeckState = {};
+const recentQuestionSignatures = {};
+
+function buildDeckOrder(length, lastIndex = null) {
+  const order = shuffle(Array.from({ length }, (_, index) => index));
+  if (length > 1 && order[0] === lastIndex) {
+    [order[0], order[1]] = [order[1], order[0]];
+  }
+  return order;
+}
+
+function drawShuffledOption(deckKey, options) {
+  const signature = options.join("\u0000");
+  let state = optionDeckState[deckKey];
+
+  if (!state || state.signature !== signature) {
+    state = {
+      signature,
+      order: buildDeckOrder(options.length),
+      pointer: 0,
+      lastIndex: null
+    };
+    optionDeckState[deckKey] = state;
+  }
+
+  if (state.pointer >= state.order.length) {
+    state.order = buildDeckOrder(options.length, state.lastIndex);
+    state.pointer = 0;
+  }
+
+  const selectedIndex = state.order[state.pointer];
+  state.pointer += 1;
+  state.lastIndex = selectedIndex;
+  return options[selectedIndex];
+}
+
+function randomizeQuestionNames(question) {
+  const serializedQuestion = JSON.stringify(question);
+  const sourceNames = Object.keys(QUESTION_NAME_GROUP_BY_SOURCE).filter((sourceName) => (
+    new RegExp(`\\b${sourceName}\\b`, "i").test(serializedQuestion)
+  ));
+
+  if (!sourceNames.length) {
+    return question;
+  }
+
+  const usedNames = new Set();
+  const replacements = new Map(sourceNames.map((sourceName) => {
+    const group = QUESTION_NAME_GROUP_BY_SOURCE[sourceName];
+    const choices = QUESTION_NAME_GROUPS[group].filter((name) => (
+      name.toLowerCase() !== sourceName && !usedNames.has(name.toLowerCase())
+    ));
+    const replacement = randomItem(choices.length ? choices : QUESTION_NAME_GROUPS[group]);
+    usedNames.add(replacement.toLowerCase());
+    return [sourceName, replacement];
+  }));
+  const namePattern = new RegExp(`\\b(${sourceNames.join("|")})\\b`, "gi");
+  const replaceNames = (value) => String(value || "").replace(namePattern, (match) => {
+    const replacement = replacements.get(match.toLowerCase()) || match;
+    return match === match.toLowerCase() ? replacement.toLowerCase() : replacement;
+  });
+
+  return {
+    ...question,
+    prompt: replaceNames(question.prompt),
+    questionCopy: replaceNames(question.questionCopy),
+    explanation: replaceNames(question.explanation),
+    defaultStatus: replaceNames(question.defaultStatus),
+    dialogue: question.dialogue.map((line) => ({
+      speaker: replaceNames(line.speaker),
+      text: replaceNames(line.text)
+    })),
+    choices: question.choices.map((choice) => ({
+      ...choice,
+      text: replaceNames(choice.text)
+    }))
+  };
+}
+
+function getQuestionSignature(question) {
+  return JSON.stringify([
+    question.prompt,
+    question.questionCopy,
+    question.dialogue.map((line) => `${line.speaker}:${line.text}`),
+    question.choices.map((choice) => choice.text).sort()
+  ]);
+}
+
+function generateFreshQuestion(questionKey, generator) {
+  const recent = recentQuestionSignatures[questionKey] || [];
+  let question = null;
+  let signature = "";
+
+  for (let attempt = 0; attempt < 10; attempt += 1) {
+    question = generator();
+    signature = getQuestionSignature(question);
+    if (!recent.includes(signature)) {
+      break;
+    }
+  }
+
+  recent.push(signature);
+  recentQuestionSignatures[questionKey] = recent.slice(-3);
+  return question;
+}
 
 function createQuestion(config) {
   const selectedWrongChoices = sample(uniqueItems(config.wrongChoices).filter((choice) => choice !== config.correctChoice), 3);
@@ -651,7 +788,7 @@ function createQuestion(config) {
     ...selectedWrongChoices.map((choice) => ({ text: choice, isAnswer: false }))
   ]);
 
-  return {
+  return randomizeQuestionNames({
     promptLabel: config.promptLabel || "Question",
     prompt: config.prompt,
     questionCopy: config.questionCopy || "",
@@ -660,7 +797,7 @@ function createQuestion(config) {
     defaultStatus: config.defaultStatus || "Choose the best answer for the question shown.",
     compactPrompt: Boolean(config.compactPrompt),
     choices
-  };
+  });
 }
 
 function getBankDeckEntry(bankKey, bank, level) {
@@ -673,19 +810,22 @@ function getBankDeckEntry(bankKey, bank, level) {
   let state = bankDeckState[deckKey];
   if (!state || state.order.length !== entries.length) {
     state = {
-      order: shuffle(entries.map((_, index) => index)),
-      pointer: 0
+      order: buildDeckOrder(entries.length),
+      pointer: 0,
+      lastIndex: null
     };
     bankDeckState[deckKey] = state;
   }
 
   if (state.pointer >= state.order.length) {
-    state.order = shuffle(entries.map((_, index) => index));
+    state.order = buildDeckOrder(entries.length, state.lastIndex);
     state.pointer = 0;
   }
 
-  const entry = entries[state.order[state.pointer]];
+  const selectedIndex = state.order[state.pointer];
+  const entry = entries[selectedIndex];
   state.pointer += 1;
+  state.lastIndex = selectedIndex;
   return entry;
 }
 
@@ -815,30 +955,36 @@ function createNumericChoices(correctAnswer, rawCandidates) {
 
 function generateArithmeticQuestion(level) {
   if (level === "easy") {
-    const mode = randomItem(["add", "subtract", "multiply"]);
+    const mode = drawShuffledOption("arithmetic:easy", ["add", "subtract", "multiply", "divide"]);
     let prompt;
     let correctAnswer;
     let wrongChoices;
 
     if (mode === "add") {
-      const a = 10 + Math.floor(Math.random() * 40);
-      const b = 5 + Math.floor(Math.random() * 25);
+      const a = randomInt(10, 69);
+      const b = randomInt(5, 39);
       correctAnswer = a + b;
       wrongChoices = [a + b + 1, a + b - 1, a + b + 10, Math.abs(a - b)];
       prompt = `What is ${a} + ${b}?`;
     } else if (mode === "subtract") {
-      const b = 5 + Math.floor(Math.random() * 18);
-      const correct = 6 + Math.floor(Math.random() * 35);
+      const b = randomInt(5, 25);
+      const correct = randomInt(6, 49);
       const a = correct + b;
       correctAnswer = correct;
       wrongChoices = [a + b, a - b + 2, b - a, a - 2];
       prompt = `What is ${a} - ${b}?`;
-    } else {
-      const a = 3 + Math.floor(Math.random() * 10);
-      const b = 2 + Math.floor(Math.random() * 9);
+    } else if (mode === "multiply") {
+      const a = randomInt(3, 14);
+      const b = randomInt(2, 12);
       correctAnswer = a * b;
       wrongChoices = [a + b, a * b + a, a * b - b, a + b + 4];
       prompt = `What is ${a} x ${b}?`;
+    } else {
+      const divisor = randomInt(2, 12);
+      correctAnswer = randomInt(2, 15);
+      const dividend = divisor * correctAnswer;
+      wrongChoices = [dividend - divisor, divisor, correctAnswer + divisor, Math.max(1, correctAnswer - 2)];
+      prompt = `What is ${dividend} / ${divisor}?`;
     }
 
     const choiceSet = createNumericChoices(correctAnswer, wrongChoices);
@@ -853,7 +999,7 @@ function generateArithmeticQuestion(level) {
   }
 
   if (level === "medium") {
-    const mode = randomItem(["order", "grouping", "mixed"]);
+    const mode = drawShuffledOption("arithmetic:medium", ["order", "grouping", "mixed"]);
     let prompt;
     let correctAnswer;
     let wrongChoices;
@@ -892,7 +1038,7 @@ function generateArithmeticQuestion(level) {
     });
   }
 
-  const mode = randomItem(["nested", "division", "combo"]);
+  const mode = drawShuffledOption("arithmetic:hard", ["nested", "division", "combo"]);
   let prompt;
   let correctAnswer;
   let wrongChoices;
@@ -936,10 +1082,10 @@ function generateArithmeticQuestion(level) {
 
 function generateFractionPercentQuestion(level) {
   if (level === "easy") {
-    const denominator = randomItem([2, 3, 4, 5]);
-    const factor = 2 + Math.floor(Math.random() * 8);
+    const denominator = randomItem([2, 3, 4, 5, 6, 8, 10]);
+    const factor = randomInt(2, 12);
     const total = denominator * factor;
-    const numerator = randomItem([1, denominator - 1].filter((value) => value > 0));
+    const numerator = randomInt(1, denominator - 1);
     const correctAnswer = (total / denominator) * numerator;
     const prompt = `What is ${numerator}/${denominator} of ${total}?`;
     const choiceSet = createNumericChoices(correctAnswer, [factor, total - correctAnswer, correctAnswer + denominator, total / numerator]);
@@ -954,11 +1100,11 @@ function generateFractionPercentQuestion(level) {
   }
 
   if (level === "medium") {
-    const mode = randomItem(["percent", "decimal", "fraction"]);
+    const mode = drawShuffledOption("fractions:medium", ["percent", "decimal", "fraction"]);
     if (mode === "percent") {
-      const percent = randomItem([20, 25, 40, 50, 75]);
+      const percent = randomItem([10, 12.5, 20, 25, 30, 40, 50, 60, 75, 80]);
       const correctChoice = `${percent}%`;
-      const decimal = (percent / 100).toFixed(percent === 25 || percent === 75 ? 2 : 1).replace(/0$/, "");
+      const decimal = String(Number((percent / 100).toFixed(3)));
       return createQuestion({
         promptLabel: "Conversion",
         prompt: `Which percent is equal to ${decimal}?`,
@@ -971,10 +1117,13 @@ function generateFractionPercentQuestion(level) {
 
     if (mode === "decimal") {
       const options = [
+        { fraction: "1/5", decimal: "0.2" },
         { fraction: "1/4", decimal: "0.25" },
         { fraction: "1/2", decimal: "0.5" },
+        { fraction: "3/5", decimal: "0.6" },
         { fraction: "3/4", decimal: "0.75" },
-        { fraction: "2/5", decimal: "0.4" }
+        { fraction: "2/5", decimal: "0.4" },
+        { fraction: "7/8", decimal: "0.875" }
       ];
       const entry = randomItem(options);
       return createQuestion({
@@ -987,28 +1136,38 @@ function generateFractionPercentQuestion(level) {
       });
     }
 
-    const numerator = randomItem([1, 2, 3]);
-    const denominator = randomItem([4, 5, 8, 10]);
-    const percent = (numerator / denominator) * 100;
+    const fractionOptions = [
+      { fraction: "1/5", percent: 20 },
+      { fraction: "1/4", percent: 25 },
+      { fraction: "3/10", percent: 30 },
+      { fraction: "2/5", percent: 40 },
+      { fraction: "1/2", percent: 50 },
+      { fraction: "3/5", percent: 60 },
+      { fraction: "3/4", percent: 75 },
+      { fraction: "4/5", percent: 80 },
+      { fraction: "7/8", percent: 87.5 }
+    ];
+    const entry = randomItem(fractionOptions);
     return createQuestion({
       promptLabel: "Conversion",
-      prompt: `Which percent is equal to ${numerator}/${denominator}?`,
-      correctChoice: `${percent}%`,
-      wrongChoices: [`${percent + 10}%`, `${Math.max(5, percent - 20)}%`, `${percent / 2}%`, `${percent + 25}%`],
+      prompt: `Which percent is equal to ${entry.fraction}?`,
+      correctChoice: `${entry.percent}%`,
+      wrongChoices: sample(fractionOptions.filter((option) => option.percent !== entry.percent).map((option) => `${option.percent}%`), 4),
       explanation: "Turn the fraction into a decimal or scale it to a denominator of 100.",
       defaultStatus: "Choose the matching conversion."
     });
   }
 
-  const mode = randomItem(["discount", "increase", "part"]);
+  const mode = drawShuffledOption("fractions:hard", ["discount", "increase", "part"]);
   if (mode === "discount") {
-    const original = randomItem([40, 60, 80, 120]);
-    const discount = randomItem([10, 20, 25, 30]);
+    const original = randomItem([40, 60, 80, 100, 120, 160, 200, 240]);
+    const discount = randomItem([10, 20, 25, 30, 40, 50]);
+    const product = randomItem(["jacket", "backpack", "bicycle", "desk", "pair of headphones"]);
     const correctAnswer = original - (original * discount) / 100;
     const choiceSet = createNumericChoices(correctAnswer, [original * discount / 100, original + (original * discount) / 100, original - discount, correctAnswer + 10]);
     return createQuestion({
       promptLabel: "Problem",
-      prompt: `A jacket costs $${original}. It is on sale for ${discount}% off. What is the sale price?`,
+      prompt: `A ${product} costs $${original}. It is on sale for ${discount}% off. What is the sale price?`,
       correctChoice: `$${choiceSet.correctChoice}`,
       wrongChoices: choiceSet.wrongChoices.map((choice) => `$${choice}`),
       explanation: "Find the discount amount first, then subtract it from the original price.",
@@ -1018,13 +1177,14 @@ function generateFractionPercentQuestion(level) {
   }
 
   if (mode === "increase") {
-    const base = randomItem([50, 80, 120, 200]);
-    const increase = randomItem([10, 15, 25, 30]);
+    const base = randomItem([40, 60, 80, 100, 120, 160, 200, 240]);
+    const increase = randomItem([10, 20, 25, 50]);
+    const group = randomItem(["club", "school orchestra", "community program", "science team"]);
     const correctAnswer = base + (base * increase) / 100;
     const choiceSet = createNumericChoices(correctAnswer, [base * increase / 100, base + increase, base - (base * increase) / 100, correctAnswer + 5]);
     return createQuestion({
       promptLabel: "Problem",
-      prompt: `A club had ${base} members. Membership grew by ${increase}%. How many members does it have now?`,
+      prompt: `A ${group} had ${base} members. Membership grew by ${increase}%. How many members does it have now?`,
       correctChoice: choiceSet.correctChoice,
       wrongChoices: choiceSet.wrongChoices,
       explanation: "Find the increase and add it to the original amount.",
@@ -1033,13 +1193,14 @@ function generateFractionPercentQuestion(level) {
     });
   }
 
-  const total = randomItem([48, 60, 72, 96]);
-  const percent = randomItem([25, 40, 60, 75]);
+  const total = randomItem([40, 60, 80, 100, 120, 160, 200]);
+  const percent = randomItem([20, 25, 40, 50, 60, 75, 80]);
+  const activity = randomItem(["joined the art club", "entered the science fair", "chose the museum trip", "completed the reading challenge"]);
   const correctAnswer = (total * percent) / 100;
   const choiceSet = createNumericChoices(correctAnswer, [percent, total - correctAnswer, correctAnswer + percent / 5, total / 2]);
   return createQuestion({
     promptLabel: "Problem",
-    prompt: `${percent}% of a class of ${total} students joined the art club. How many students joined?`,
+    prompt: `${percent}% of ${total} students ${activity}. How many students is that?`,
     correctChoice: choiceSet.correctChoice,
     wrongChoices: choiceSet.wrongChoices,
     explanation: "Multiply the total by the percent written as a decimal.",
@@ -1050,10 +1211,10 @@ function generateFractionPercentQuestion(level) {
 
 function generateEquationQuestion(level) {
   if (level === "easy") {
-    const mode = randomItem(["addition", "multiplication"]);
+    const mode = drawShuffledOption("equations:easy", ["addition", "subtraction", "multiplication", "division"]);
     if (mode === "addition") {
-      const answer = 3 + Math.floor(Math.random() * 12);
-      const addend = 2 + Math.floor(Math.random() * 9);
+      const answer = randomInt(3, 20);
+      const addend = randomInt(2, 14);
       const total = answer + addend;
       const choiceSet = createNumericChoices(answer, [total - 1, addend, answer + addend, answer + 2]);
       return createQuestion({
@@ -1066,8 +1227,38 @@ function generateEquationQuestion(level) {
       });
     }
 
-    const factor = 2 + Math.floor(Math.random() * 7);
-    const answer = 3 + Math.floor(Math.random() * 9);
+    if (mode === "subtraction") {
+      const answer = randomInt(8, 30);
+      const subtrahend = randomInt(2, 12);
+      const result = answer - subtrahend;
+      const choiceSet = createNumericChoices(answer, [result, answer + subtrahend, subtrahend, answer - 2]);
+      return createQuestion({
+        promptLabel: "Equation",
+        prompt: `Solve for x: x - ${subtrahend} = ${result}`,
+        correctChoice: choiceSet.correctChoice,
+        wrongChoices: choiceSet.wrongChoices,
+        explanation: "Add the subtracted number to both sides to find x.",
+        defaultStatus: "Solve the equation."
+      });
+    }
+
+    if (mode === "division") {
+      const divisor = randomInt(2, 10);
+      const quotient = randomInt(3, 14);
+      const answer = divisor * quotient;
+      const choiceSet = createNumericChoices(answer, [quotient, answer - divisor, answer + divisor, divisor + quotient]);
+      return createQuestion({
+        promptLabel: "Equation",
+        prompt: `Solve for x: x / ${divisor} = ${quotient}`,
+        correctChoice: choiceSet.correctChoice,
+        wrongChoices: choiceSet.wrongChoices,
+        explanation: "Multiply both sides by the divisor to find x.",
+        defaultStatus: "Solve the equation."
+      });
+    }
+
+    const factor = randomInt(2, 10);
+    const answer = randomInt(3, 14);
     const total = factor * answer;
     const choiceSet = createNumericChoices(answer, [factor + answer, total - factor, total / 2, answer + factor]);
     return createQuestion({
@@ -1081,7 +1272,7 @@ function generateEquationQuestion(level) {
   }
 
   if (level === "medium") {
-    const mode = randomItem(["twoStep", "division"]);
+    const mode = drawShuffledOption("equations:medium", ["twoStep", "subtraction", "division"]);
     if (mode === "twoStep") {
       const factor = 2 + Math.floor(Math.random() * 5);
       const answer = 2 + Math.floor(Math.random() * 10);
@@ -1094,6 +1285,22 @@ function generateEquationQuestion(level) {
         correctChoice: choiceSet.correctChoice,
         wrongChoices: choiceSet.wrongChoices,
         explanation: "Subtract first, then divide.",
+        defaultStatus: "Solve the equation."
+      });
+    }
+
+    if (mode === "subtraction") {
+      const factor = randomInt(2, 7);
+      const answer = randomInt(3, 14);
+      const constant = randomInt(2, 12);
+      const total = factor * answer - constant;
+      const choiceSet = createNumericChoices(answer, [total + constant, Math.floor(total / factor), answer + constant, answer - 2]);
+      return createQuestion({
+        promptLabel: "Equation",
+        prompt: `Solve for x: ${factor}x - ${constant} = ${total}`,
+        correctChoice: choiceSet.correctChoice,
+        wrongChoices: choiceSet.wrongChoices,
+        explanation: "Add the constant first, then divide by the coefficient.",
         defaultStatus: "Solve the equation."
       });
     }
@@ -1114,16 +1321,17 @@ function generateEquationQuestion(level) {
     });
   }
 
-  const mode = randomItem(["ticket", "perimeter", "groupCost"]);
+  const mode = drawShuffledOption("equations:hard", ["ticket", "perimeter", "groupCost"]);
   if (mode === "ticket") {
-    const ticketPrice = randomItem([6, 7, 8, 9]);
-    const fee = randomItem([10, 12, 15]);
-    const count = randomItem([2, 3, 4]);
+    const ticketPrice = randomInt(5, 14);
+    const fee = randomItem([8, 10, 12, 15, 18]);
+    const count = randomInt(2, 6);
+    const event = randomItem(["concert", "movie", "museum", "school play", "basketball game"]);
     const total = ticketPrice * count + fee;
     const choiceSet = createNumericChoices(ticketPrice, [total - fee, total / count, fee, ticketPrice + count]);
     return createQuestion({
       promptLabel: "Word Problem",
-      prompt: `${count} tickets plus a $${fee} service fee cost $${total} total. How much does one ticket cost?`,
+      prompt: `${count} ${event} tickets plus a $${fee} service fee cost $${total} total. How much does one ticket cost?`,
       correctChoice: `$${choiceSet.correctChoice}`,
       wrongChoices: choiceSet.wrongChoices.map((choice) => `$${choice}`),
       explanation: "Subtract the fee, then divide the remaining amount by the number of tickets.",
@@ -1133,13 +1341,14 @@ function generateEquationQuestion(level) {
   }
 
   if (mode === "perimeter") {
-    const length = randomItem([9, 11, 13, 15]);
-    const width = randomItem([4, 5, 6, 7]);
+    const length = randomInt(9, 22);
+    const width = randomInt(4, Math.min(12, length - 2));
+    const shape = randomItem(["garden", "poster", "photo frame", "practice field", "tabletop"]);
     const perimeter = 2 * (length + width);
     const choiceSet = createNumericChoices(width, [perimeter / 2, length - width, perimeter - length, width + 3]);
     return createQuestion({
       promptLabel: "Word Problem",
-      prompt: `A rectangle has a perimeter of ${perimeter}. Its length is ${length}. What is its width?`,
+      prompt: `A rectangular ${shape} has a perimeter of ${perimeter}. Its length is ${length}. What is its width?`,
       correctChoice: choiceSet.correctChoice,
       wrongChoices: choiceSet.wrongChoices,
       explanation: "Half the perimeter gives length plus width. Then subtract the length.",
@@ -1148,14 +1357,20 @@ function generateEquationQuestion(level) {
     });
   }
 
-  const notebookPrice = randomItem([3, 4, 5, 6]);
-  const notebookCount = randomItem([3, 4, 5]);
-  const penPrice = randomItem([2, 3, 4]);
+  const itemSet = randomItem([
+    { main: "notebooks", extra: "pen" },
+    { main: "sketchbooks", extra: "marker" },
+    { main: "folders", extra: "pencil case" },
+    { main: "binders", extra: "ruler" }
+  ]);
+  const notebookPrice = randomInt(3, 9);
+  const notebookCount = randomInt(3, 7);
+  const penPrice = randomInt(2, 6);
   const total = notebookPrice * notebookCount + penPrice;
   const choiceSet = createNumericChoices(notebookPrice, [total - penPrice, total / notebookCount, penPrice, notebookPrice + notebookCount]);
   return createQuestion({
     promptLabel: "Word Problem",
-    prompt: `${notebookCount} notebooks and one pen cost $${total}. The pen costs $${penPrice}. How much does each notebook cost?`,
+    prompt: `${notebookCount} ${itemSet.main} and one ${itemSet.extra} cost $${total}. The ${itemSet.extra} costs $${penPrice}. How much does each ${itemSet.main.slice(0, -1)} cost?`,
     correctChoice: `$${choiceSet.correctChoice}`,
     wrongChoices: choiceSet.wrongChoices.map((choice) => `$${choice}`),
     explanation: "Subtract the pen cost, then divide by the number of notebooks.",
@@ -1555,7 +1770,10 @@ function renderCurrentQuestion() {
   const practiceKey = getPracticeKey();
   const practice = getPracticeConfig();
   ensurePracticeState(practiceKey);
-  currentQuestion = practice.levels[selectedLevel].generator();
+  currentQuestion = generateFreshQuestion(
+    `${practiceKey}:${selectedLevel}`,
+    practice.levels[selectedLevel].generator
+  );
   questionLocked = false;
 
   subjectTitleEl.textContent = getCourseConfig().title;
