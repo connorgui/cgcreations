@@ -601,6 +601,35 @@ async function saveUserGameScore(userId, gameKey, scoreData) {
   ensureDatabaseEnabled();
   const pool = await getDatabasePool();
   const normalizedGameKey = sanitizeGameKey(gameKey);
+  let normalizedScoreData = scoreData || {};
+
+  if (normalizedGameKey === 'pi-voice-checker') {
+    const existing = await readUserGameScore(userId, normalizedGameKey);
+    const toRecordCount = (value) => {
+      const number = Number(value);
+      return Number.isFinite(number) && number >= 0 ? Math.floor(number) : 0;
+    };
+    const existingBest = Math.max(
+      toRecordCount(existing?.score_data?.bestCorrectCount),
+      toRecordCount(existing?.score_data?.correctCount)
+    );
+    const incomingBest = Math.max(
+      toRecordCount(normalizedScoreData.bestCorrectCount),
+      toRecordCount(normalizedScoreData.correctCount)
+    );
+    const preservedBest = Math.max(existingBest, incomingBest);
+
+    const preservedScoreData = existingBest > incomingBest
+      ? existing.score_data
+      : normalizedScoreData;
+
+    normalizedScoreData = {
+      ...preservedScoreData,
+      bestCorrectCount: preservedBest,
+      correctCount: preservedBest
+    };
+  }
+
   await pool.query(
     `
       INSERT INTO user_game_scores (user_id, game_key, score_data, updated_at)
@@ -608,7 +637,7 @@ async function saveUserGameScore(userId, gameKey, scoreData) {
       ON CONFLICT (user_id, game_key)
       DO UPDATE SET score_data = EXCLUDED.score_data, updated_at = NOW()
     `,
-    [userId, normalizedGameKey, JSON.stringify(scoreData || {})]
+    [userId, normalizedGameKey, JSON.stringify(normalizedScoreData)]
   );
 }
 

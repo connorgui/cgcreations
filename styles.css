@@ -883,6 +883,10 @@ h3 {
   margin-top: 24px;
 }
 
+.pi-record-sync-status {
+  margin: 10px 2px 0;
+}
+
 .section-head {
   display: flex;
   justify-content: space-between;
