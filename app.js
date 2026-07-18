@@ -319,7 +319,7 @@ function clearTranscriptCommitTimeout() {
 }
 
 function updateListenButton() {
-  listenButtonEl.textContent = listening ? "Stop Listening" : "Start Listening";
+  listenButtonEl.textContent = (listening || shouldResume) ? "Stop Listening" : "Start Listening";
 }
 
 function setSignal(state) {
@@ -645,7 +645,7 @@ function processBestTranscriptCandidate() {
   return commitBestTranscriptCandidate();
 }
 
-function startListening() {
+function startListening({ isAutomaticRestart = false } = {}) {
   if (!recognition || listening) {
     return;
   }
@@ -655,17 +655,25 @@ function startListening() {
   manualStopRequested = false;
   shouldResume = true;
   audioCaptureActive = false;
-  if (!hasResultToDisplay) {
-    setSignal("idle");
+  updateListenButton();
+
+  if (!isAutomaticRestart) {
+    clearDisplayedResult();
+    setStatus("Starting microphone. Wait for the ready message, then say your digits.");
   }
-  setStatus("Starting microphone. Wait for the ready message, then say your digits.");
 
   ensureMicrophoneReady().finally(() => {
+    if (!shouldResume || manualStopRequested || listening) {
+      updateListenButton();
+      return;
+    }
+
     try {
       recognition.start();
     } catch (error) {
       shouldResume = false;
       hasResultToDisplay = true;
+      updateListenButton();
       setSignal("error");
       setStatus(`Could not start speech recognition: ${error.message}.`);
     }
@@ -681,13 +689,14 @@ function stopListening() {
   clearTranscriptCommitTimeout();
   manualStopRequested = true;
   shouldResume = false;
+  updateListenButton();
   if (listening) {
     recognition.stop();
   }
 }
 
 function toggleListening() {
-  if (listening) {
+  if (listening || shouldResume) {
     stopListening();
     clearDisplayedResult();
     setStatus("Listening stopped.");
@@ -766,7 +775,7 @@ function initRecognition() {
       restartTimeoutId = window.setTimeout(() => {
         restartTimeoutId = null;
         if (!listening && shouldResume) {
-          startListening();
+          startListening({ isAutomaticRestart: true });
         }
       }, 80);
       return;
@@ -786,6 +795,7 @@ function initRecognition() {
       shouldResume = false;
       manualStopRequested = false;
       hasResultToDisplay = true;
+      updateListenButton();
       setStatus("Microphone access was denied. Enable it in the browser and try again.");
       setSignal("error");
       return;
@@ -796,24 +806,26 @@ function initRecognition() {
         return;
       }
 
-      setStatus("Listening was interrupted. Reconnecting to the microphone.");
       if (!hasResultToDisplay) {
+        setStatus("Listening was interrupted. Reconnecting to the microphone.");
         setSignal("idle");
       }
       return;
     }
 
     if (event.error === "no-speech") {
-      setStatus(audioCaptureActive
-        ? "Microphone ready. No digits detected yet."
-        : "Microphone still getting ready. Wait for the ready message, then try again.");
       if (!hasResultToDisplay) {
+        setStatus(audioCaptureActive
+          ? "Microphone ready. No digits detected yet."
+          : "Microphone still getting ready. Wait for the ready message, then try again.");
         setSignal("idle");
       }
       return;
     }
 
     hasResultToDisplay = true;
+    shouldResume = false;
+    updateListenButton();
     setStatus(`Speech recognition error: ${event.error}.`);
     setSignal("error");
   };
@@ -892,6 +904,7 @@ window.piVoiceAppTestApi = {
     status: statusTextEl.textContent,
     totalPiDigits: PI_DIGITS.length,
     listening,
+    sessionActive: listening || shouldResume,
     isMobile
   })
 };
