@@ -630,6 +630,25 @@ async function saveUserGameScore(userId, gameKey, scoreData) {
     };
   }
 
+  if (normalizedGameKey === 'snake-classic') {
+    const existing = await readUserGameScore(userId, normalizedGameKey);
+    const toScore = (value) => {
+      const number = Number(value);
+      return Number.isFinite(number) && number >= 0 ? Math.floor(number) : 0;
+    };
+    const preservedBest = Math.max(
+      toScore(existing?.score_data?.score),
+      toScore(existing?.score_data?.bestScore),
+      toScore(normalizedScoreData.score),
+      toScore(normalizedScoreData.bestScore)
+    );
+
+    normalizedScoreData = {
+      ...normalizedScoreData,
+      bestScore: preservedBest
+    };
+  }
+
   await pool.query(
     `
       INSERT INTO user_game_scores (user_id, game_key, score_data, updated_at)

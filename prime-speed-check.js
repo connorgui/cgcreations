@@ -85,6 +85,45 @@ function updateStats() {
   window.scoreTracker?.notifyScore();
 }
 
+function applyAccountScore(scoreData) {
+  if (!scoreData || typeof scoreData !== "object") {
+    return false;
+  }
+
+  const incomingCorrect = Math.max(0, Number(scoreData.correctCount) || 0);
+  const incomingWrong = Math.max(0, Number(scoreData.wrongCount) || 0);
+  const incomingAnswered = Math.max(
+    incomingCorrect + incomingWrong,
+    Math.max(0, Number(scoreData.answeredCount) || 0)
+  );
+
+  if (incomingAnswered < answeredCount) {
+    return false;
+  }
+
+  correctCount = incomingCorrect;
+  wrongCount = incomingWrong;
+  answeredCount = incomingAnswered;
+  streakCount = Math.max(0, Number(scoreData.streakCount) || 0);
+  const averageTime = Math.max(0, Number(scoreData.averageTimeMs) || 0);
+  totalAnswerTime = averageTime * answeredCount;
+  roundActive = false;
+  currentNumber = null;
+  currentQuestionStartedAt = 0;
+  currentNumberEl.textContent = "-";
+
+  if (scoreData.selectedLevel && (LEVELS[scoreData.selectedLevel] || scoreData.selectedLevel === "custom")) {
+    selectedLevel = scoreData.selectedLevel;
+  }
+
+  updateLevelSelection();
+  setAnswerButtonsDisabled(true);
+  updateStats();
+  setSignal("idle");
+  setStatus("Account progress loaded. Press Start Round to continue.");
+  return true;
+}
+
 function updateRangeLabel() {
   rangeLabelEl.textContent = `${currentRange.min}-${currentRange.max}`;
 }
@@ -266,6 +305,8 @@ window.gameScoreApi = {
     currentRange,
     currentNumber,
     roundActive,
+    selectedLevel,
     updatedAt: new Date().toISOString()
-  })
+  }),
+  applyScoreSnapshot: applyAccountScore
 };

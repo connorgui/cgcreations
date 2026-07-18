@@ -22,6 +22,7 @@
   const gameKey = body.dataset.gameKey || "";
   const trackButtons = Array.from(document.querySelectorAll("[data-track-score='true']"));
   const promptLinks = Array.from(document.querySelectorAll("[data-auth-prompt-link='true']"));
+  const customSyncGameKeys = new Set(["pi-voice-checker", "snake-classic", "study-courses"]);
 
   const authState = {
     signedIn: false,
@@ -33,7 +34,9 @@
     authMode: "signin",
     pendingAction: null,
     trackingEnabled: false,
-    scoreSyncTimeoutId: null
+    scoreSyncTimeoutId: null,
+    scoreLoadedForUsername: null,
+    scoreLoadPromise: null
   };
 
   function escapeHtml(value) {
@@ -471,9 +474,15 @@
         profileData: authState.profileData
       }
     }));
+    refreshTrackingForAuth();
   }
 
   function collectScore() {
+    const apiSnapshot = window.gameScoreApi?.getScoreSnapshot?.();
+    if (apiSnapshot && typeof apiSnapshot === "object") {
+      return apiSnapshot;
+    }
+
     if (gameKey === "pi-voice-checker") {
       return {
         correctCount: Number(document.getElementById("correct-count")?.textContent || 0),
@@ -522,8 +531,69 @@
     return null;
   }
 
+  function setTrackingButtonText(message) {
+    trackButtons.forEach((button) => {
+      button.textContent = message;
+    });
+  }
+
+  function resetTrackingState() {
+    uiState.trackingEnabled = false;
+    uiState.scoreLoadedForUsername = null;
+    uiState.scoreLoadPromise = null;
+    if (uiState.scoreSyncTimeoutId) {
+      window.clearTimeout(uiState.scoreSyncTimeoutId);
+      uiState.scoreSyncTimeoutId = null;
+    }
+    setTrackingButtonText("Track your score");
+  }
+
+  async function loadSharedScore() {
+    if (!authState.signedIn || !authState.username || !gameKey || customSyncGameKeys.has(gameKey)) {
+      return;
+    }
+
+    if (uiState.scoreLoadedForUsername === authState.username) {
+      return;
+    }
+
+    if (uiState.scoreLoadPromise) {
+      return uiState.scoreLoadPromise;
+    }
+
+    const usernameAtStart = authState.username;
+    uiState.scoreLoadPromise = (async () => {
+      const payload = await fetchJson(`/api/game-score/${encodeURIComponent(gameKey)}`, { method: "GET" });
+      if (!authState.signedIn || authState.username !== usernameAtStart) {
+        return;
+      }
+
+      uiState.scoreLoadedForUsername = usernameAtStart;
+      const savedScore = payload?.scoreData;
+      if (savedScore && typeof savedScore === "object") {
+        window.gameScoreApi?.applyScoreSnapshot?.(savedScore);
+      }
+    })();
+
+    try {
+      await uiState.scoreLoadPromise;
+    } finally {
+      uiState.scoreLoadPromise = null;
+    }
+  }
+
   function syncScoreSoon() {
-    if (!uiState.trackingEnabled || !authState.signedIn || !gameKey) {
+    if (
+      !uiState.trackingEnabled ||
+      !authState.signedIn ||
+      !gameKey ||
+      customSyncGameKeys.has(gameKey)
+    ) {
+      return;
+    }
+
+    if (uiState.scoreLoadedForUsername !== authState.username) {
+      enableTracking({ automatic: true });
       return;
     }
 
@@ -538,25 +608,65 @@
         return;
       }
 
+      setTrackingButtonText("Syncing...");
       fetchJson(`/api/game-score/${encodeURIComponent(gameKey)}`, {
         method: "POST",
         body: JSON.stringify({ scoreData })
-      }).catch(() => {});
+      }).then(() => {
+        if (authState.signedIn) {
+          setTrackingButtonText("Account sync on");
+        }
+      }).catch(() => {
+        if (authState.signedIn) {
+          setTrackingButtonText("Sync unavailable - retrying");
+        }
+      });
     }, 250);
   }
 
-  function enableTracking() {
+  async function enableTracking({ automatic = false } = {}) {
     if (!authState.signedIn) {
-      uiState.pendingAction = { type: "track" };
-      openAuth("signin");
+      if (!automatic) {
+        uiState.pendingAction = { type: "track" };
+        openAuth("signin");
+      }
+      return;
+    }
+
+    if (!trackButtons.length) {
+      return;
+    }
+
+    if (customSyncGameKeys.has(gameKey)) {
+      setTrackingButtonText("Account sync on");
       return;
     }
 
     uiState.trackingEnabled = true;
-    trackButtons.forEach((button) => {
-      button.textContent = "Tracking enabled";
-    });
+    setTrackingButtonText("Syncing...");
+
+    try {
+      await loadSharedScore();
+    } catch {
+      setTrackingButtonText("Sync unavailable - retrying");
+      return;
+    }
+
+    setTrackingButtonText("Account sync on");
     syncScoreSoon();
+  }
+
+  function refreshTrackingForAuth() {
+    if (!trackButtons.length) {
+      return;
+    }
+
+    if (!authState.signedIn) {
+      resetTrackingState();
+      return;
+    }
+
+    enableTracking({ automatic: true });
   }
 
   function openPrompt(action) {
@@ -761,14 +871,11 @@
       authState.signedIn = false;
       authState.username = null;
       authState.profileData = null;
-      uiState.trackingEnabled = false;
+      resetTrackingState();
       setSkipPrompt(window.localStorage.getItem(skipPromptKey) === "true");
       setAuthButton();
       emitAuthChange();
       accountMenu.classList.add("hidden");
-      trackButtons.forEach((button) => {
-        button.textContent = "Track your score";
-      });
       closeModal();
     } catch (error) {
       deleteError.textContent = error.message || "Could not delete your account.";
@@ -784,14 +891,11 @@
     authState.signedIn = false;
     authState.username = null;
     authState.profileData = null;
-    uiState.trackingEnabled = false;
+    resetTrackingState();
     setSkipPrompt(window.localStorage.getItem(skipPromptKey) === "true");
     setAuthButton();
     emitAuthChange();
     accountMenu.classList.add("hidden");
-    trackButtons.forEach((button) => {
-      button.textContent = "Track your score";
-    });
   });
 
   authButton.addEventListener("click", () => {

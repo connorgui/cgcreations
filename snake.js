@@ -72,7 +72,10 @@ async function syncBestScoreFromAccount() {
     }
 
     const payload = await response.json().catch(() => ({}));
-    const remoteScore = Number(payload?.scoreData?.score || 0);
+    const remoteScore = Math.max(
+      Number(payload?.scoreData?.score || 0),
+      Number(payload?.scoreData?.bestScore || 0)
+    );
     if (Number.isFinite(remoteScore) && remoteScore > bestScore) {
       persistBestScore(remoteScore);
       updateStats();

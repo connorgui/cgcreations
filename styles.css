@@ -3211,9 +3211,26 @@ button.secondary.is-selected,
   box-shadow: 0 14px 34px rgba(98, 67, 43, 0.08);
 }
 
+.creation-card-active {
+  color: inherit;
+  cursor: pointer;
+  text-decoration: none;
+}
+
+.creation-card-active:focus-visible {
+  outline: 3px solid rgba(184, 92, 56, 0.35);
+  outline-offset: 4px;
+}
+
 .creation-card:hover {
   border-color: #cfad8d;
   box-shadow: 0 22px 46px rgba(98, 67, 43, 0.14);
+}
+
+.creation-card-active:hover .creation-link,
+.creation-card-active:focus-visible .creation-link {
+  color: #6c311e;
+  transform: translateX(3px);
 }
 
 .creation-card-featured {

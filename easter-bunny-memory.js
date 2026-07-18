@@ -153,6 +153,46 @@ function updateStats() {
   window.scoreTracker?.notifyScore();
 }
 
+function applyAccountScore(scoreData) {
+  if (!scoreData || typeof scoreData !== "object") {
+    return false;
+  }
+
+  const incomingWins = Math.max(0, Number(scoreData.wins) || 0);
+  const incomingLosses = Math.max(0, Number(scoreData.losses) || 0);
+  const incomingRounds = Math.max(
+    incomingWins + incomingLosses,
+    Math.max(0, Number(scoreData.rounds) || 0)
+  );
+
+  if (incomingRounds < rounds) {
+    return false;
+  }
+
+  shuffleToken += 1;
+  isAnimating = false;
+  roundActive = false;
+  activeConfig = null;
+  rounds = incomingRounds;
+  wins = incomingWins;
+  losses = incomingLosses;
+  streak = Math.max(0, Number(scoreData.streak) || 0);
+
+  if (scoreData.selectedLevel && (PRESET_CONFIGS[scoreData.selectedLevel] || scoreData.selectedLevel === "custom")) {
+    selectedLevel = scoreData.selectedLevel;
+  }
+
+  stageEl.innerHTML = "";
+  startButtonEl.disabled = false;
+  startButtonEl.textContent = "Start Round";
+  updateLevelButtons();
+  updateStats();
+  refreshRuleSummary();
+  setSignal("idle");
+  setStatus("Account progress loaded. Press Start Round to continue.");
+  return true;
+}
+
 function cloneConfig(config) {
   return {
     ...config,
@@ -823,7 +863,8 @@ window.gameScoreApi = {
     selectedLevel,
     activeConfig: activeConfig ? { ...activeConfig, tricks: { ...activeConfig.tricks } } : null,
     updatedAt: new Date().toISOString()
-  })
+  }),
+  applyScoreSnapshot: applyAccountScore
 };
 
 
