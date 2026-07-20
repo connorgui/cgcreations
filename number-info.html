@@ -4,7 +4,7 @@
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <title>Number Information</title>
-  <link rel="stylesheet" href="/styles.css?v=20260718b">
+  <link rel="stylesheet" href="/styles.css?v=20260718c">
 </head>
 <body>
   <main class="app">
@@ -13,7 +13,7 @@
       <p class="eyebrow">Number Facts</p>
       <h1>Number Information</h1>
       <p class="intro">
-        Enter a whole number to see whether it is prime, what factors it has, and a few other quick facts.
+        Enter two whole numbers to explore prime and factor facts for the first number, then compare both numbers using GCF and LCM.
       </p>
 
       <section class="prime-config" aria-label="Number input">
@@ -24,8 +24,12 @@
 
         <div class="number-info-controls">
           <label class="form-field" for="number-info-input">
-            Whole Number
+            Number to Analyze
             <input id="number-info-input" type="number" inputmode="numeric" min="0" step="1" value="97">
+          </label>
+          <label class="form-field" for="number-info-comparison-input">
+            Compare With
+            <input id="number-info-comparison-input" type="number" inputmode="numeric" min="0" step="1" value="36">
           </label>
           <button id="number-info-check-button" type="button">Show Info</button>
         </div>
@@ -52,6 +56,14 @@
         <article class="stat-card">
           <span class="stat-label">Prime Factors</span>
           <strong id="number-info-prime-factors">97</strong>
+        </article>
+        <article class="stat-card">
+          <span id="number-info-gcf-label" class="stat-label">GCF with 36</span>
+          <strong id="number-info-gcf">1</strong>
+        </article>
+        <article class="stat-card">
+          <span id="number-info-lcm-label" class="stat-label">LCM with 36</span>
+          <strong id="number-info-lcm">3,492</strong>
         </article>
       </div>
 
@@ -82,13 +94,13 @@
         <h2>What It Shows</h2>
         <p class="support-text">
           The tool checks whether the number is prime, lists its factors, shows its prime factorization,
-          and adds simple facts like parity, digit sum, square, and cube.
+          adds simple facts like parity, digit sum, square, and cube, and finds the GCF and LCM of both numbers.
         </p>
       </section>
     </section>
   </main>
 
-  <script src="/number-info.js?v=20260330a"></script>
+  <script src="/number-info.js?v=20260718a"></script>
   <script src="/analytics.js?v=20260307a"></script>
   <script src="/auth-ui.js?v=20260718b"></script>
   <script>
