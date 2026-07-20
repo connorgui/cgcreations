@@ -13,10 +13,10 @@ This project can be deployed as a Node web service.
    - Start command: `node server.js`
 5. In Render, add the environment variable `DATABASE_URL` with your Neon connection string.
 6. If you want country logging, also add `IPINFO_TOKEN`.
-7. To enable the AI Assistant, add `OPENAI_API_KEY`. You can optionally set `OPENAI_MODEL`; the default is `gpt-5.6-luna`.
+7. To enable the AI Assistant with Groq's free plan, add `GROQ_API_KEY`. You can optionally set `GROQ_MODEL`; the default is `openai/gpt-oss-20b`.
 8. After deploy, open the generated public URL.
 
-Never put `OPENAI_API_KEY` in an HTML or browser JavaScript file. The server reads it from Render Environment and sends AI requests without exposing it to visitors.
+Never put `GROQ_API_KEY` in an HTML or browser JavaScript file. The server reads it from Render Environment and sends AI requests without exposing it to visitors.
 
 ## Keep the current visitor count with Neon
 

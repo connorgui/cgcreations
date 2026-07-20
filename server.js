@@ -11,8 +11,8 @@ const analyticsPath = process.env.ANALYTICS_PATH
   : bundledAnalyticsPath;
 const databaseUrl = process.env.DATABASE_URL || '';
 const ipinfoToken = process.env.IPINFO_TOKEN || '';
-const openAiApiKey = process.env.OPENAI_API_KEY || '';
-const openAiModel = process.env.OPENAI_MODEL || 'gpt-5.6-luna';
+const groqApiKey = process.env.GROQ_API_KEY || '';
+const groqModel = process.env.GROQ_MODEL || 'openai/gpt-oss-20b';
 const port = Number(process.env.PORT || 8080);
 const sessionCookieName = 'cg_session';
 const sessionDurationMs = 1000 * 60 * 60 * 24 * 30;
@@ -956,37 +956,21 @@ function normalizeAssistantMessages(rawMessages) {
   })).filter((message) => message.content);
 }
 
-function extractAssistantText(responseData) {
-  if (typeof responseData?.output_text === 'string' && responseData.output_text.trim()) {
-    return responseData.output_text.trim();
-  }
-  const textParts = [];
-  for (const item of Array.isArray(responseData?.output) ? responseData.output : []) {
-    for (const content of Array.isArray(item?.content) ? item.content : []) {
-      if ((content?.type === 'output_text' || content?.type === 'text') && typeof content.text === 'string') {
-        textParts.push(content.text);
-      }
-    }
-  }
-  return textParts.join('\n').trim();
-}
-
-async function requestAssistantReply(messages, safetyIdentifier) {
+async function requestAssistantReply(messages) {
   const controller = new AbortController();
   const timeout = setTimeout(() => controller.abort(), 25_000);
   try {
-    const response = await fetch('https://api.openai.com/v1/responses', {
+    const response = await fetch('https://api.groq.com/openai/v1/chat/completions', {
       method: 'POST',
-      headers: { Authorization: `Bearer ${openAiApiKey}`, 'Content-Type': 'application/json' },
+      headers: { Authorization: `Bearer ${groqApiKey}`, 'Content-Type': 'application/json' },
       body: JSON.stringify({
-        model: openAiModel,
-        instructions: 'You are the CG Creations learning assistant. Help students understand schoolwork and use the site. Be friendly, clear, age-appropriate, and concise. Teach the method instead of only giving an answer. Never claim you performed actions on the website. If a request is unsafe or inappropriate, decline briefly and redirect to safe educational help.',
-        input: messages,
-        reasoning: { effort: 'low' },
-        text: { verbosity: 'low' },
-        max_output_tokens: 700,
-        safety_identifier: safetyIdentifier,
-        store: false
+        model: groqModel,
+        messages: [{
+          role: 'system',
+          content: 'You are the CG Creations learning assistant. Help students understand schoolwork and use the site. Be friendly, clear, age-appropriate, and concise. Teach the method instead of only giving an answer. Never claim you performed actions on the website. If a request is unsafe or inappropriate, decline briefly and redirect to safe educational help.'
+        }, ...messages],
+        temperature: 0.5,
+        max_completion_tokens: 700
       }),
       signal: controller.signal
     });
@@ -996,7 +980,9 @@ async function requestAssistantReply(messages, safetyIdentifier) {
       error.statusCode = response.status >= 400 && response.status < 500 ? 502 : 503;
       throw error;
     }
-    const reply = extractAssistantText(responseData);
+    const reply = typeof responseData?.choices?.[0]?.message?.content === 'string'
+      ? responseData.choices[0].message.content.trim()
+      : '';
     if (!reply) {
       const error = new Error('The AI service returned an empty answer.');
       error.statusCode = 502;
@@ -1319,8 +1305,8 @@ const server = http.createServer(async (req, res) => {
   }
 
   if (req.method === 'POST' && pathname === '/api/assistant') {
-    if (!openAiApiKey) {
-      sendJson(res, 503, { error: 'The AI assistant is not configured yet. Add OPENAI_API_KEY in Render Environment.' });
+    if (!groqApiKey) {
+      sendJson(res, 503, { error: 'The AI assistant is not configured yet. Add GROQ_API_KEY in Render Environment.' });
       return;
     }
     if (!assistantRateLimitAllows(getClientIp(req))) {
@@ -1336,8 +1322,7 @@ const server = http.createServer(async (req, res) => {
         sendJson(res, 400, { error: 'Enter a message for the assistant.' });
         return;
       }
-      const visitorId = crypto.createHash('sha256').update(`cg-creations:${getClientIp(req) || 'unknown'}`).digest('hex');
-      sendJson(res, 200, { reply: await requestAssistantReply(messages, visitorId) });
+      sendJson(res, 200, { reply: await requestAssistantReply(messages) });
     } catch (error) {
       const isTimeout = error && error.name === 'AbortError';
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 503);
@@ -1380,8 +1365,8 @@ server.listen(port, async () => {
     console.log('IP geolocation logging is disabled. Set IPINFO_TOKEN to log visitor countries.');
   }
 
-  if (!openAiApiKey) {
-    console.log('AI assistant is disabled. Set OPENAI_API_KEY to enable it.');
+  if (!groqApiKey) {
+    console.log('AI assistant is disabled. Set GROQ_API_KEY to enable it.');
   }
 
 });
