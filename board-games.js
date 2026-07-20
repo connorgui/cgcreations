@@ -5,11 +5,16 @@
   const difficulty = document.querySelector('[data-difficulty]');
   const helpTitle = document.getElementById('game-help-title');
   const helpCopy = document.getElementById('game-help-copy');
+  const undoButton = document.querySelector('[data-undo]');
+  const redoButton = document.querySelector('[data-redo]');
   const stats = { wins: 0, draws: 0, losses: 0 };
   let level = 'medium';
   let mode = 'ai';
   let locked = false;
   let generation = 0;
+  let start;
+  let undoMove;
+  let redoMove;
 
   function updateStats() {
     Object.keys(stats).forEach((key) => { document.getElementById(key).textContent = String(stats[key]); });
@@ -24,6 +29,10 @@
   }
 
   function pick(items) { return items[Math.floor(Math.random() * items.length)]; }
+  function setHistoryAvailability(canUndo, canRedo) {
+    undoButton.disabled = !canUndo;
+    redoButton.disabled = !canRedo;
+  }
   function updateModeCopy() {
     const local = mode === 'local';
     document.getElementById('wins-label').textContent = local ? 'Player 1 Wins' : 'Wins';
@@ -67,6 +76,8 @@
   document.querySelectorAll('[data-level]').forEach((button) => button.addEventListener('click', () => setLevel(button.dataset.level)));
   document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
   document.querySelector('[data-new-game]').addEventListener('click', () => start());
+  undoButton.addEventListener('click', () => undoMove());
+  redoButton.addEventListener('click', () => redoMove());
   window.gameScoreApi = {
     getScoreSnapshot: () => ({ ...stats }),
     applyScoreSnapshot(saved) {
@@ -74,12 +85,12 @@
       updateStats();
     }
   };
-
-  let start;
   if (kind === 'tic') {
     const boardEl = document.getElementById('tic-board');
     let board = Array(9).fill('');
     let turn = 'X';
+    let history = [];
+    let historyIndex = -1;
     const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     function result(state) {
       for (const line of lines) {
@@ -114,28 +125,58 @@
         cell.addEventListener('click', () => play(index)); boardEl.appendChild(cell);
       });
     }
+    function endingCopy(winner) {
+      if (winner === 'X') return mode === 'local' ? 'Player 1 wins with three X marks in a row!' : 'You won! Three X marks in a row.';
+      if (winner === 'O') return mode === 'local' ? 'Player 2 wins with three O marks in a row!' : 'The computer won this round. Try another plan.';
+      return 'Draw. Every square is filled.';
+    }
+    function recordHistory() {
+      history = history.slice(0, historyIndex + 1);
+      history.push({ board: [...board], turn });
+      historyIndex = history.length - 1;
+      setHistoryAvailability(historyIndex > 0, false);
+    }
+    function restoreHistory(nextIndex, action) {
+      generation += 1;
+      historyIndex = nextIndex;
+      board = [...history[historyIndex].board];
+      turn = history[historyIndex].turn;
+      const ended = result(board);
+      locked = Boolean(ended);
+      render(ended?.line || []);
+      if (ended) message.textContent = `${action} ${endingCopy(ended.winner)}`;
+      else if (mode === 'local') message.textContent = `${action} ${turn === 'X' ? 'Player 1 (X)' : 'Player 2 (O)'}'s turn.`;
+      else message.textContent = `${action} Your turn. Choose a square.`;
+      setHistoryAvailability(historyIndex > 0, historyIndex < history.length - 1);
+    }
+    undoMove = () => { if (historyIndex > 0) restoreHistory(historyIndex - 1, 'Move undone.'); };
+    redoMove = () => { if (historyIndex < history.length - 1) restoreHistory(historyIndex + 1, 'Move restored.'); };
     function checkEnd() {
       const ended = result(board); if (!ended) return false; render(ended.line);
-      if (ended.winner === 'X') finish('wins', mode === 'local' ? 'Player 1 wins with three X marks in a row!' : 'You won! Three X marks in a row.');
-      else if (ended.winner === 'O') finish('losses', mode === 'local' ? 'Player 2 wins with three O marks in a row!' : 'The computer won this round. Try another plan.');
-      else finish('draws', 'Draw. Every square is filled.');
+      if (ended.winner === 'X') finish('wins', endingCopy(ended.winner));
+      else if (ended.winner === 'O') finish('losses', endingCopy(ended.winner));
+      else finish('draws', endingCopy(ended.winner));
       return true;
     }
     function play(index) {
       if (locked || board[index]) return;
       board[index] = mode === 'local' ? turn : 'X';
       render();
-      if (checkEnd()) return;
+      if (checkEnd()) { recordHistory(); return; }
       if (mode === 'local') {
         turn = turn === 'X' ? 'O' : 'X';
         message.textContent = `${turn === 'X' ? 'Player 1 (X)' : 'Player 2 (O)'}'s turn. Choose a square.`;
+        recordHistory();
         return;
       }
       locked = true; message.textContent = 'Computer is thinking...';
+      setHistoryAvailability(false, false);
       const currentGeneration = generation;
       setTimeout(() => {
         if (currentGeneration !== generation || mode !== 'ai') return;
-        board[chooseMove()] = 'O'; locked = false; render(); if (!checkEnd()) message.textContent = 'Your turn. Choose a square.';
+        board[chooseMove()] = 'O'; locked = false; render();
+        if (!checkEnd()) message.textContent = 'Your turn. Choose a square.';
+        recordHistory();
       }, 280);
     }
     start = () => {
@@ -143,12 +184,15 @@
       board = Array(9).fill(''); turn = 'X'; locked = false;
       message.textContent = mode === 'local' ? "Player 1 (X)'s turn. Choose a square." : 'Your turn. Choose a square.';
       render();
+      history = []; historyIndex = -1; recordHistory();
     };
   } else {
     const boardEl = document.getElementById('connect-board');
     const ROWS = 6, COLS = 7;
     let board = [];
     let turn = 'R';
+    let history = [];
+    let historyIndex = -1;
     function validColumns(state) { return Array.from({length: COLS}, (_, col) => col).filter((col) => !state[0][col]); }
     function drop(state, col, player) { for (let row = ROWS - 1; row >= 0; row--) if (!state[row][col]) { state[row][col] = player; return row; } return -1; }
     function winning(state, p) {
@@ -175,31 +219,63 @@
       let best=-Infinity,moves=[];for(const col of open){const next=clone(board);drop(next,col,'Y');const score=search(next,5,-Infinity,Infinity,false);if(score>best){best=score;moves=[col];}else if(score===best)moves.push(col);}return pick(moves);
     }
     function render(lastRow=-1,lastCol=-1) { boardEl.innerHTML=''; board.forEach((row,r)=>row.forEach((piece,c)=>{const cell=document.createElement('button');cell.type='button';cell.className=`connect-cell ${piece==='R'?'red':piece==='Y'?'yellow':''}${r===lastRow&&c===lastCol?' last':''}`;cell.setAttribute('aria-label',`Column ${c+1}${piece?`, ${piece==='R'?'red':'yellow'}`:', empty'}`);cell.addEventListener('click',()=>play(c));boardEl.appendChild(cell);})); }
+    function endingCopy(player) {
+      if (player === 'draw') return 'Draw. The board is full.';
+      if (mode === 'local') return `${player === 'R' ? 'Player 1 (red)' : 'Player 2 (yellow)'} connected four!`;
+      return player === 'R' ? 'You connected four!' : 'The computer connected four. Try again.';
+    }
+    function boardResult() {
+      if (winning(board, 'R')) return 'R';
+      if (winning(board, 'Y')) return 'Y';
+      return validColumns(board).length ? '' : 'draw';
+    }
+    function recordHistory() {
+      history = history.slice(0, historyIndex + 1);
+      history.push({ board: clone(board), turn });
+      historyIndex = history.length - 1;
+      setHistoryAvailability(historyIndex > 0, false);
+    }
+    function restoreHistory(nextIndex, action) {
+      generation += 1;
+      historyIndex = nextIndex;
+      board = clone(history[historyIndex].board);
+      turn = history[historyIndex].turn;
+      const ended = boardResult();
+      locked = Boolean(ended);
+      render();
+      if (ended) message.textContent = `${action} ${endingCopy(ended)}`;
+      else if (mode === 'local') message.textContent = `${action} ${turn === 'R' ? 'Player 1 (red)' : 'Player 2 (yellow)'}'s turn.`;
+      else message.textContent = `${action} Your turn. Choose a column.`;
+      setHistoryAvailability(historyIndex > 0, historyIndex < history.length - 1);
+    }
+    undoMove = () => { if (historyIndex > 0) restoreHistory(historyIndex - 1, 'Move undone.'); };
+    redoMove = () => { if (historyIndex < history.length - 1) restoreHistory(historyIndex + 1, 'Move restored.'); };
     function checkEnd(player) {
       if (winning(board, player)) {
-        const copy = mode === 'local'
-          ? `${player === 'R' ? 'Player 1 (red)' : 'Player 2 (yellow)'} connected four!`
-          : player === 'R' ? 'You connected four!' : 'The computer connected four. Try again.';
-        finish(player === 'R' ? 'wins' : 'losses', copy);
+        finish(player === 'R' ? 'wins' : 'losses', endingCopy(player));
         return true;
       }
-      if (!validColumns(board).length) { finish('draws', 'Draw. The board is full.'); return true; }
+      if (!validColumns(board).length) { finish('draws', endingCopy('draw')); return true; }
       return false;
     }
     function play(col) {
       if (locked || !validColumns(board).includes(col)) return;
       const player = mode === 'local' ? turn : 'R';
-      const row = drop(board, col, player); render(row, col); if (checkEnd(player)) return;
+      const row = drop(board, col, player); render(row, col); if (checkEnd(player)) { recordHistory(); return; }
       if (mode === 'local') {
         turn = turn === 'R' ? 'Y' : 'R';
         message.textContent = `${turn === 'R' ? 'Player 1 (red)' : 'Player 2 (yellow)'}'s turn. Choose a column.`;
+        recordHistory();
         return;
       }
       locked = true; message.textContent = 'Computer is thinking...';
+      setHistoryAvailability(false, false);
       const currentGeneration = generation;
       setTimeout(() => {
         if (currentGeneration !== generation || mode !== 'ai') return;
-        const aiCol = chooseMove(); const aiRow = drop(board, aiCol, 'Y'); locked = false; render(aiRow, aiCol); if (!checkEnd('Y')) message.textContent = 'Your turn. Choose a column.';
+        const aiCol = chooseMove(); const aiRow = drop(board, aiCol, 'Y'); locked = false; render(aiRow, aiCol);
+        if (!checkEnd('Y')) message.textContent = 'Your turn. Choose a column.';
+        recordHistory();
       }, 320);
     }
     start = () => {
@@ -207,6 +283,7 @@
       board = Array.from({length:ROWS},()=>Array(COLS).fill('')); turn = 'R'; locked = false;
       message.textContent = mode === 'local' ? "Player 1 (red)'s turn. Choose a column." : 'Your turn. Choose a column.';
       render();
+      history = []; historyIndex = -1; recordHistory();
     };
   }
   updateModeCopy();

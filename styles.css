@@ -3601,7 +3601,7 @@ button.secondary.is-selected,
 #site-auth-settings-view .site-avatar-editor { border-color: #bddaf1; background: #e8f5ff; }
 
 /* Shared board-game and assistant layouts. */
-.game-suite-panel { width: min(980px, 100%); }
+.game-suite-panel { width: min(1440px, 100%); padding: clamp(24px, 3vw, 44px); }
 .game-toolbar { display: flex; align-items: end; justify-content: space-between; flex-wrap: wrap; gap: 18px; margin: 22px 0; }
 .game-option-groups { display: flex; align-items: end; flex-wrap: wrap; gap: 18px; }
 .game-option-groups [hidden] { display: none; }
@@ -3610,7 +3610,9 @@ button.secondary.is-selected,
 .mode-picker { padding: 5px; border: 1px solid #bfdcf2; border-radius: 18px; background: #edf8ff; }
 .mode-picker button { border-radius: 13px; box-shadow: none; }
 .mode-picker button.is-selected { background: linear-gradient(135deg, #0862c5, #1799ee); color: #fff; }
-.game-layout { display: grid; grid-template-columns: minmax(280px, 1fr) minmax(230px, 310px); gap: 24px; align-items: start; }
+.game-history-actions { display: flex; flex-wrap: wrap; gap: 9px; }
+.game-history-actions button { min-width: 0; }
+.game-layout { display: grid; grid-template-columns: minmax(360px, 1fr) minmax(250px, 330px); gap: clamp(18px, 2.5vw, 34px); align-items: start; }
 .game-board-shell { padding: 18px; border: 1px solid #bcd9ef; border-radius: 30px; background: rgba(255,255,255,.76); box-shadow: inset 0 0 0 7px rgba(221,241,255,.55); }
 .game-side-card { display: grid; gap: 14px; }
 .mini-stats { display: grid; grid-template-columns: repeat(3, 1fr); gap: 9px; }
@@ -3624,10 +3626,22 @@ button.secondary.is-selected,
 .tic-cell.is-winning { animation: winPulse .8s ease-in-out infinite alternate; background: #d7f7e3; }
 @keyframes winPulse { to { transform: scale(.94); box-shadow: 0 0 0 7px rgba(47, 158, 68, .12); } }
 
-.connect-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: 7px; padding: 14px; border-radius: 24px; background: linear-gradient(160deg, #0a67ca, #064b9e); }
-.connect-cell { position: relative; min-width: 0; aspect-ratio: 1; padding: 0; border-radius: 50%; background: #eaf6ff; box-shadow: inset 0 4px 9px rgba(4, 43, 90, .35); }
-.connect-cell.red { background: #f05d5e; }
-.connect-cell.yellow { background: #ffd166; }
+.connect-team-strip { display: grid; grid-template-columns: minmax(0, 1fr) auto minmax(0, 1fr); align-items: center; gap: 16px; margin: 8px 0 22px; }
+.connect-team-card { display: flex; align-items: center; gap: 14px; min-height: 76px; padding: 14px 20px; border-radius: 24px; color: #fff; box-shadow: 0 15px 30px rgba(22, 53, 92, .16); }
+.connect-team-card strong, .connect-team-card span { display: block; }
+.connect-team-card strong { font: 800 1.08rem/1.1 "Aptos", "Trebuchet MS", sans-serif; text-transform: uppercase; letter-spacing: .06em; }
+.connect-team-card span { margin-top: 3px; color: rgba(255,255,255,.82); font-size: .82rem; }
+.connect-team-card.red-team { background: linear-gradient(135deg, #b7192c, #f04452); }
+.connect-team-card.yellow-team { justify-content: flex-end; text-align: right; background: linear-gradient(135deg, #f0a500, #ffd447); color: #503500; }
+.connect-team-card.yellow-team span { color: rgba(80,53,0,.72); }
+.team-disc { flex: 0 0 46px; width: 46px; aspect-ratio: 1; margin: 0 !important; border: 5px solid rgba(255,255,255,.72); border-radius: 50%; background: rgba(255,255,255,.2); box-shadow: inset 0 4px 7px rgba(40,20,0,.18); }
+.connect-versus { display: grid; place-items: center; width: 52px; aspect-ratio: 1; border-radius: 50%; background: #123b72; color: white; font: 900 .85rem/1 "Aptos", sans-serif; box-shadow: 0 10px 22px rgba(18,59,114,.22); }
+[data-board-game="connect"] .game-suite-panel { background: linear-gradient(135deg, rgba(255,248,234,.96), rgba(240,249,255,.96)); }
+[data-board-game="connect"] .game-board-shell { padding: clamp(10px, 1.7vw, 22px); border-color: #438ed1; background: linear-gradient(145deg, #dcedff, #fff5dc); box-shadow: inset 0 0 0 7px rgba(255,255,255,.5), 0 18px 40px rgba(6,75,158,.17); }
+.connect-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: clamp(5px, .8vw, 12px); padding: clamp(10px, 1.5vw, 22px); border: 5px solid #063f89; border-radius: 30px; background: linear-gradient(160deg, #1687ea, #0755b3 65%, #043f8d); box-shadow: inset 0 9px 18px rgba(255,255,255,.2), 0 15px 28px rgba(4,49,107,.2); }
+.connect-cell { position: relative; min-width: 0; aspect-ratio: 1; padding: 0; border: 3px solid rgba(3,46,100,.34); border-radius: 50%; background: #eef8ff; box-shadow: inset 0 6px 12px rgba(4,43,90,.38), 0 3px 0 rgba(255,255,255,.28); }
+.connect-cell.red { border-color: #8e1224; background: radial-gradient(circle at 36% 28%, #ff8b91 0 9%, #f04452 30%, #bd182c 76%); box-shadow: inset 0 -8px 13px rgba(92,4,19,.34), 0 5px 10px rgba(122,17,35,.24); }
+.connect-cell.yellow { border-color: #bd7e00; background: radial-gradient(circle at 36% 28%, #fff1a3 0 9%, #ffd447 30%, #eaa300 76%); box-shadow: inset 0 -8px 13px rgba(126,76,0,.28), 0 5px 10px rgba(151,97,0,.24); }
 .connect-cell.last { animation: dropPop .35s ease-out; }
 @keyframes dropPop { from { transform: translateY(-70px); } 70% { transform: translateY(5px); } to { transform: translateY(0); } }
 
@@ -3671,10 +3685,20 @@ button.secondary.is-selected,
   .showcase-main { grid-column: auto; }
   .apps-page-hero { padding: 72px 10px 28px; }
   .apps-page-hero h1 { font-size: clamp(2.8rem, 14vw, 4.2rem); }
-  .game-board-shell { padding: 10px; border-radius: 22px; }
+  .game-suite-panel { width: 100%; padding: 20px 12px; }
+  .game-board-shell { padding: 8px; border-radius: 22px; }
   .game-side-card { grid-template-columns: 1fr; }
   .game-side-card > * { grid-column: auto !important; }
-  .connect-board { gap: 4px; padding: 8px; }
+  .game-history-actions { width: 100%; }
+  .game-history-actions button { flex: 1 1 calc(50% - 9px); }
+  .connect-team-strip { gap: 7px; }
+  .connect-team-card { min-height: 62px; padding: 10px; border-radius: 18px; }
+  .connect-team-card strong { font-size: .8rem; }
+  .connect-team-card span { font-size: .68rem; }
+  .team-disc { display: none !important; }
+  .connect-versus { width: 38px; font-size: .7rem; }
+  .connect-board { gap: 3px; padding: 6px; border-width: 3px; border-radius: 18px; }
+  .connect-cell { border-width: 2px; }
   .assistant-header { padding: 28px 22px; }
   .assistant-message { max-width: 88%; }
   .assistant-composer { grid-template-columns: 1fr; padding-inline: 16px; }

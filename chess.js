@@ -3,14 +3,17 @@
   const messageEl = document.getElementById('chess-message');
   const introEl = document.getElementById('game-intro');
   const difficultyEl = document.querySelector('[data-difficulty]');
+  const undoButton = document.getElementById('chess-undo');
+  const redoButton = document.getElementById('chess-redo');
   const glyphs = { K:'\u2654',Q:'\u2655',R:'\u2656',B:'\u2657',N:'\u2658',P:'\u2659',k:'\u265A',q:'\u265B',r:'\u265C',b:'\u265D',n:'\u265E',p:'\u265F' };
   const values = { p:100,n:320,b:330,r:500,q:900,k:20000 };
   const stats = { wins:0, draws:0, losses:0 };
-  let level='medium', mode='ai', state, selected=null, options=[], locked=false, lastMove=null, generation=0;
+  let level='medium', mode='ai', state, selected=null, options=[], locked=false, lastMove=null, generation=0, history=[], historyIndex=-1;
   const inside=(r,c)=>r>=0&&r<8&&c>=0&&c<8;
   const white=p=>p&&p===p.toUpperCase();
   const color=p=>white(p)?'w':'b';
   const clone=s=>({board:s.board.map(row=>[...row]),turn:s.turn,castle:{...s.castle},ep:s.ep?[...s.ep]:null});
+  const cloneMove=m=>m?{...m,from:[...m.from],to:[...m.to]}:null;
   function initial(){return{board:['rnbqkbnr','pppppppp','........','........','........','........','PPPPPPPP','RNBQKBNR'].map(row=>[...row].map(x=>x==='.'?'':x)),turn:'w',castle:{K:true,Q:true,k:true,q:true},ep:null};}
 
   function attacked(s,r,c,by){
@@ -36,6 +39,8 @@
   function search(s,depth,alpha,beta){const moves=legalMoves(s);if(!moves.length){if(inCheck(s,s.turn))return s.turn==='b'?-100000-depth:100000+depth;return 0;}if(!depth)return evaluate(s);if(s.turn==='b'){let best=-Infinity;for(const m of moves){best=Math.max(best,search(apply(s,m),depth-1,alpha,beta));alpha=Math.max(alpha,best);if(alpha>=beta)break;}return best;}let best=Infinity;for(const m of moves){best=Math.min(best,search(apply(s,m),depth-1,alpha,beta));beta=Math.min(beta,best);if(alpha>=beta)break;}return best;}
   function chooseAi(){const moves=legalMoves(state,'b');if(level==='easy')return moves[Math.floor(Math.random()*moves.length)];if(level==='medium'){const weighted=moves.map(m=>({m,score:(m.capture?values[m.capture.toLowerCase()]:0)+Math.random()*80})).sort((a,b)=>b.score-a.score);return weighted[0].m;}let best=-Infinity,bestMoves=[];for(const m of moves){const score=search(apply(state,m),2,-Infinity,Infinity);if(score>best){best=score;bestMoves=[m];}else if(score===best)bestMoves.push(m);}return bestMoves[Math.floor(Math.random()*bestMoves.length)];}
   function updateStats(){for(const k of Object.keys(stats))document.getElementById(k).textContent=String(stats[k]);window.scoreTracker?.notifyScore?.();}
+  function updateHistoryButtons(){undoButton.disabled=historyIndex<=0;redoButton.disabled=historyIndex>=history.length-1;}
+  function recordHistory(){history=history.slice(0,historyIndex+1);history.push({state:clone(state),lastMove:cloneMove(lastMove)});historyIndex=history.length-1;updateHistoryButtons();}
   function updateModeUi(){
     const local=mode==='local';
     difficultyEl.hidden=local;
@@ -64,22 +69,41 @@
     }else{stats.draws++;messageEl.textContent='Stalemate. The game is a draw.';}
     updateStats();return true;
   }
+  function describeRestoredPosition(action){
+    const moves=legalMoves(state),sideName=state.turn==='w'?'White':'Black';
+    if(!moves.length){
+      locked=true;
+      if(inCheck(state,state.turn))messageEl.textContent=`${action} Checkmate. ${state.turn==='w'?'Black':'White'} wins.`;
+      else messageEl.textContent=`${action} Stalemate. The game is a draw.`;
+      return;
+    }
+    locked=false;
+    const checkCopy=inCheck(state,state.turn)?' Check.':'';
+    messageEl.textContent=`${action}${checkCopy} ${sideName} to move.`;
+  }
+  function restoreHistory(nextIndex,action){
+    generation++;historyIndex=nextIndex;state=clone(history[historyIndex].state);lastMove=cloneMove(history[historyIndex].lastMove);selected=null;options=[];render();describeRestoredPosition(action);updateHistoryButtons();
+  }
+  function undoMove(){if(historyIndex>0)restoreHistory(historyIndex-1,'Move undone.');}
+  function redoMove(){if(historyIndex<history.length-1)restoreHistory(historyIndex+1,'Move restored.');}
   function render(){boardEl.innerHTML='';for(let r=0;r<8;r++)for(let c=0;c<8;c++){const p=state.board[r][c],move=options.find(m=>m.to[0]===r&&m.to[1]===c),button=document.createElement('button');button.type='button';button.className=`chess-square ${(r+c)%2?'dark':''}${selected&&selected[0]===r&&selected[1]===c?' is-selected':''}${move?(p?' is-capture':' is-move'):''}${lastMove&&((lastMove.from[0]===r&&lastMove.from[1]===c)||(lastMove.to[0]===r&&lastMove.to[1]===c))?' last-move':''}`;button.textContent=glyphs[p]||'';button.setAttribute('aria-label',`${String.fromCharCode(97+c)}${8-r}${p?`, ${p}`:', empty'}`);button.addEventListener('click',()=>clickSquare(r,c));boardEl.appendChild(button);}}
   function clickSquare(r,c){
     if(locked||(mode==='ai'&&state.turn!=='w'))return;
     const chosen=options.find(m=>m.to[0]===r&&m.to[1]===c);
     if(chosen){
-      state=apply(state,chosen);lastMove=chosen;selected=null;options=[];render();if(status())return;
+      state=apply(state,chosen);lastMove=chosen;selected=null;options=[];render();if(status()){recordHistory();return;}
       if(mode==='local'){
         const sideName=state.turn==='w'?'White':'Black';
         messageEl.textContent=inCheck(state,state.turn)?`Check. ${sideName} to move.`:`${sideName} to move.`;
+        recordHistory();
         return;
       }
       locked=true;messageEl.textContent='Computer is thinking...';
+      undoButton.disabled=true;redoButton.disabled=true;
       const currentGeneration=generation;
       setTimeout(()=>{
         if(currentGeneration!==generation||mode!=='ai')return;
-        const ai=chooseAi();state=apply(state,ai);lastMove=ai;locked=false;render();if(!status())messageEl.textContent=inCheck(state,'w')?'Check. White to move.':'White to move.';
+        const ai=chooseAi();state=apply(state,ai);lastMove=ai;locked=false;render();if(!status())messageEl.textContent=inCheck(state,'w')?'Check. White to move.':'White to move.';recordHistory();
       },80);
       return;
     }
@@ -92,10 +116,12 @@
     }
     render();
   }
-  function newGame(){generation++;state=initial();selected=null;options=[];lastMove=null;locked=false;messageEl.textContent=mode==='local'?'Player 1 (White) to move.':'White to move.';render();}
+  function newGame(){generation++;state=initial();selected=null;options=[];lastMove=null;locked=false;messageEl.textContent=mode==='local'?'Player 1 (White) to move.':'White to move.';render();history=[];historyIndex=-1;recordHistory();}
   document.querySelectorAll('[data-level]').forEach(button=>button.addEventListener('click',()=>{level=button.dataset.level;document.querySelectorAll('[data-level]').forEach(b=>b.classList.toggle('is-selected',b===button));newGame();}));
   document.querySelectorAll('[data-mode]').forEach(button=>button.addEventListener('click',()=>{mode=button.dataset.mode;updateModeUi();newGame();}));
   document.getElementById('chess-new').addEventListener('click',newGame);
+  undoButton.addEventListener('click',undoMove);
+  redoButton.addEventListener('click',redoMove);
   window.gameScoreApi={getScoreSnapshot:()=>({...stats}),applyScoreSnapshot(saved){for(const k of Object.keys(stats))stats[k]=Math.max(stats[k],Number(saved?.[k]||0));updateStats();}};
   window.chessGameTest={initial,legalMoves,apply,inCheck};
   updateModeUi();
