@@ -3,156 +3,74 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <title>Creations</title>
-  <link rel="stylesheet" href="/styles.css?v=20260718b">
+  <meta name="description" content="CG Creations brings learning tools, planners, games, and an AI study assistant together in one friendly place.">
+  <title>CG Creations</title>
+  <link rel="stylesheet" href="/styles.css?v=20260720a">
 </head>
-<body class="modern-home">
+<body class="modern-home blue-site">
   <main id="home" class="app home-app">
     <section class="home-shell">
       <header class="site-nav">
-        <a class="site-logo" href="#home" aria-label="CG Creations home">
+        <a class="site-logo" href="/" aria-label="CG Creations home">
           <span class="site-logo-mark">CG</span>
           <span>Creations<span class="site-logo-dot">.</span></span>
         </a>
         <nav class="site-nav-links" aria-label="Main navigation">
-          <a href="#home">Home</a>
-          <a href="#creations">Creations</a>
-          <a href="/study-courses.html">Study</a>
+          <a class="is-current" href="/">Home</a>
+          <a href="/apps">Apps</a>
+          <a href="/studycourses">Study</a>
+          <a href="/assistant">AI Assistant</a>
           <a href="#about">About</a>
         </nav>
       </header>
 
-      <section class="home-hero" aria-labelledby="home-title">
+      <section class="home-hero blue-hero" aria-labelledby="home-title">
+        <div class="hero-orb hero-orb-one" aria-hidden="true"></div>
+        <div class="hero-orb hero-orb-two" aria-hidden="true"></div>
         <div class="home-hero-copy">
-          <p class="eyebrow"><span class="eyebrow-dot"></span> Smart tools for curious minds</p>
-          <h1 id="home-title">Explore, practice, and <span>build momentum.</span></h1>
-          <p class="home-subtitle">
-            A growing collection of focused learning tools, clever games, and useful organizers designed to work beautifully on every screen.
-          </p>
+          <p class="eyebrow"><span class="eyebrow-dot"></span> Learn, play, organize</p>
+          <h1 id="home-title">One bright place to <span>keep growing.</span></h1>
+          <p class="home-subtitle">Explore focused study courses, useful school tools, smart games, and a new AI learning assistant built for clear answers.</p>
           <div class="hero-actions">
-            <a class="hero-primary" href="#creations">Explore creations <span aria-hidden="true">&rarr;</span></a>
-            <a class="hero-secondary" href="/study-courses.html"><span class="play-mark" aria-hidden="true">&#9654;</span> Start studying</a>
+            <a class="hero-primary" href="/apps">Explore all apps <span aria-hidden="true">&rarr;</span></a>
+            <a class="hero-secondary" href="/assistant"><span class="play-mark assistant-mark" aria-hidden="true">AI</span> Ask the assistant</a>
           </div>
-          <p class="hero-note"><span></span> Free to explore. New ideas are always being added.</p>
+          <p class="hero-note"><span></span> Free to explore. Progress can sync with your account.</p>
         </div>
 
-        <div class="hero-metrics" aria-label="Creations at a glance">
-          <article class="hero-metric hero-metric-primary">
-            <span class="hero-metric-icon" aria-hidden="true">&#8599;</span>
-            <strong id="unique-users">0</strong>
-            <span>Unique visitors</span>
-          </article>
-          <article class="hero-metric">
-            <span class="hero-metric-icon" aria-hidden="true">&#10003;</span>
-            <strong>7</strong>
-            <span>Active creations</span>
-          </article>
-          <article class="hero-metric">
-            <span class="hero-metric-icon" aria-hidden="true">A+</span>
-            <strong>3</strong>
-            <span>Study subjects</span>
-          </article>
-          <article class="hero-metric hero-metric-tint">
-            <span class="hero-metric-icon" aria-hidden="true">&#9729;</span>
-            <strong>Sync</strong>
-            <span>Account progress</span>
-          </article>
+        <div class="hero-showcase" aria-label="Featured creations">
+          <a class="showcase-card showcase-main" href="/studycourses">
+            <span class="showcase-kicker">Featured learning</span>
+            <strong>Study Courses</strong>
+            <span>Fresh reading, writing, and math practice.</span>
+            <span class="showcase-arrow" aria-hidden="true">&nearr;</span>
+          </a>
+          <a class="showcase-card" href="/tictactoe"><span class="mini-icon">XO</span><strong>Play smarter</strong><span>Three AI levels</span></a>
+          <a class="showcase-card" href="/homework"><span class="mini-icon">+</span><strong>Stay organized</strong><span>Homework sync</span></a>
+          <a class="showcase-card showcase-soft" href="/assistant"><span class="mini-icon">AI</span><strong>Ask anything</strong><span>Learning help</span></a>
         </div>
       </section>
 
       <section id="about" class="home-about" aria-labelledby="about-title">
-        <div>
-          <p class="eyebrow">Why Creations</p>
-          <h2 id="about-title">Small tools. Real progress.</h2>
-        </div>
-        <p>Jump into a quick challenge, organize schoolwork, or build a daily practice streak without navigating a complicated platform.</p>
-        <div class="home-benefits" aria-label="Site benefits">
-          <span>Responsive</span>
-          <span>Account sync</span>
-          <span>Always growing</span>
-        </div>
+        <div><p class="eyebrow">Built for momentum</p><h2 id="about-title">Quick to open. Easy to use.</h2></div>
+        <p>Pick one small goal and begin immediately. Every creation is responsive, focused, and designed to feel comfortable on phones, tablets, and computers.</p>
+        <div class="home-benefits" aria-label="Site benefits"><span>11 creations</span><span>Account sync</span><span>Mobile ready</span></div>
       </section>
 
-      <section id="creations" class="creations-section" aria-labelledby="creations-title">
-        <div class="creations-heading">
-          <div>
-            <p class="eyebrow">Featured collection</p>
-            <h2 id="creations-title">Choose your next creation</h2>
-          </div>
-          <p>Learning, organization, experiments, and games in one place.</p>
-        </div>
-
-        <div class="creations-grid" aria-label="Creations tools">
-          <a class="creation-card creation-card-active creation-card-featured" href="/study-courses.html" data-auth-prompt-link="true" data-auth-prompt-label="Study Courses">
-            <div class="creation-card-top"><div class="creation-icon study-icon">A+</div><span class="creation-tag">Learning</span></div>
-            <h3>Study Courses</h3>
-            <p>Practice reading, writing, and math with level-based question generators that keep producing fresh problems.</p>
-            <span class="creation-link">Open tool <span aria-hidden="true">&rarr;</span></span>
-          </a>
-
-          <a class="creation-card creation-card-active" href="/pi-checker.html" data-auth-prompt-link="true" data-auth-prompt-label="Pi Voice Checker">
-            <div class="creation-card-top"><div class="creation-icon pi-icon">&pi;</div><span class="creation-tag">Voice</span></div>
-            <h3>Pi Voice Checker</h3>
-            <p>Speak digits of Pi, track your streak, and see the exact prefix you have recited correctly.</p>
-            <span class="creation-link">Open tool <span aria-hidden="true">&rarr;</span></span>
-          </a>
-
-          <a class="creation-card creation-card-active" href="/easter-bunny-memory.html" data-auth-prompt-link="true" data-auth-prompt-label="Easter Bunny Memory">
-            <div class="creation-card-top"><div class="creation-icon bunny-icon">&#128007;</div><span class="creation-tag">Memory</span></div>
-            <h3>Easter Bunny Memory</h3>
-            <p>Follow the bunny behind the eggs, survive the trick effects, and build your own custom shuffle rules.</p>
-            <span class="creation-link">Open tool <span aria-hidden="true">&rarr;</span></span>
-          </a>
-
-          <a class="creation-card creation-card-active" href="/prime-speed-check.html" data-auth-prompt-link="true" data-auth-prompt-label="Prime Speed Check">
-            <div class="creation-card-top"><div class="creation-icon prime-icon">P</div><span class="creation-tag">Math</span></div>
-            <h3>Prime Speed Check</h3>
-            <p>Judge whether each number is prime, switch difficulty levels, and test your speed on phone or desktop.</p>
-            <span class="creation-link">Open tool <span aria-hidden="true">&rarr;</span></span>
-          </a>
-
-          <a class="creation-card creation-card-active" href="/number-info.html">
-            <div class="creation-card-top"><div class="creation-icon number-info-icon">#</div><span class="creation-tag">Numbers</span></div>
-            <h3>Number Information</h3>
-            <p>Check whether a number is prime, list its factors, and see quick number facts in one place.</p>
-            <span class="creation-link">Open tool <span aria-hidden="true">&rarr;</span></span>
-          </a>
-
-          <a class="creation-card creation-card-active" href="/snake.html" data-auth-prompt-link="true" data-auth-prompt-label="Classic Snake">
-            <div class="creation-card-top"><div class="creation-icon snake-icon">S</div><span class="creation-tag">Game</span></div>
-            <h3>Classic Snake</h3>
-            <p>Guide the snake across the grid, eat food to grow longer, and survive as long as you can.</p>
-            <span class="creation-link">Open tool <span aria-hidden="true">&rarr;</span></span>
-          </a>
-
-          <a class="creation-card creation-card-active" href="/homework-tracker.html" data-auth-prompt-link="true" data-auth-prompt-label="Homework Tracker">
-            <div class="creation-card-top"><div class="creation-icon homework-icon">&#9998;</div><span class="creation-tag">Planner</span></div>
-            <h3>Homework Tracker</h3>
-            <p>Save assignments by account, mark them complete, and keep your schoolwork organized across devices.</p>
-            <span class="creation-link">Open tool <span aria-hidden="true">&rarr;</span></span>
-          </a>
-
-          <article class="creation-card creation-card-muted">
-            <div class="creation-card-top"><div class="creation-icon soon-icon">+</div><span class="creation-tag">Next up</span></div>
-            <h3>More Tools</h3>
-            <p>More creations can be added here as the collection grows.</p>
-            <span class="creation-link creation-link-disabled">Coming soon</span>
-          </article>
-        </div>
+      <section class="home-feature-strip" aria-labelledby="discover-title">
+        <div><p class="eyebrow">Ready when you are</p><h2 id="discover-title">Find your next creation.</h2><p>Browse the full blue app gallery, including three new strategy games.</p></div>
+        <a class="hero-primary" href="/apps">Open the app gallery <span aria-hidden="true">&rarr;</span></a>
       </section>
 
       <footer class="site-footer">
-        <a class="site-logo" href="#home"><span class="site-logo-mark">CG</span><span>Creations<span class="site-logo-dot">.</span></span></a>
-        <p>Tools, experiments, and more.</p>
-        <a href="#home">Back to top &uarr;</a>
+        <a class="site-logo" href="/"><span class="site-logo-mark">CG</span><span>Creations<span class="site-logo-dot">.</span></span></a>
+        <p>Tools, learning, games, and more.</p>
+        <a href="/apps">Browse apps &rarr;</a>
       </footer>
     </section>
   </main>
-
   <script src="/analytics.js?v=20260307a"></script>
-  <script src="/auth-ui.js?v=20260718b"></script>
-  <script>
-    window.siteAnalytics.init();
-  </script>
+  <script src="/auth-ui.js?v=20260720a"></script>
+  <script>window.siteAnalytics.init();</script>
 </body>
 </html>

@@ -73,6 +73,14 @@ try {
     $context = $listener.GetContext()
     $request = $context.Request
     $path = $request.Url.AbsolutePath.TrimStart('/')
+    $cleanRoutes = @{
+      '' = 'index.html'; 'apps' = 'apps.html'; 'studycourses' = 'study-courses.html';
+      'pichecker' = 'pi-checker.html'; 'bunnymemory' = 'easter-bunny-memory.html';
+      'primespeed' = 'prime-speed-check.html'; 'numberinfo' = 'number-info.html';
+      'snake' = 'snake.html'; 'homework' = 'homework-tracker.html';
+      'tictactoe' = 'tic-tac-toe.html'; 'connectfour' = 'connect-four.html';
+      'chess' = 'chess.html'; 'assistant' = 'assistant.html'
+    }
 
     if ($request.HttpMethod -eq 'GET' -and $path -eq 'api/analytics') {
       $analytics = Get-AnalyticsData
@@ -94,8 +102,8 @@ try {
       continue
     }
 
-    if ([string]::IsNullOrWhiteSpace($path)) {
-      $path = 'index.html'
+    if ($cleanRoutes.ContainsKey($path)) {
+      $path = $cleanRoutes[$path]
     }
 
     $filePath = Join-Path $root $path

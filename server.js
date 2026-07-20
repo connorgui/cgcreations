@@ -11,12 +11,45 @@ const analyticsPath = process.env.ANALYTICS_PATH
   : bundledAnalyticsPath;
 const databaseUrl = process.env.DATABASE_URL || '';
 const ipinfoToken = process.env.IPINFO_TOKEN || '';
+const openAiApiKey = process.env.OPENAI_API_KEY || '';
+const openAiModel = process.env.OPENAI_MODEL || 'gpt-5.6-luna';
 const port = Number(process.env.PORT || 8080);
 const sessionCookieName = 'cg_session';
 const sessionDurationMs = 1000 * 60 * 60 * 24 * 30;
 
 let databasePool = null;
 let databaseSetupPromise = null;
+const assistantRateLimits = new Map();
+
+const cleanPageRoutes = new Map([
+  ['/', 'index.html'],
+  ['/apps', 'apps.html'],
+  ['/studycourses', 'study-courses.html'],
+  ['/pichecker', 'pi-checker.html'],
+  ['/bunnymemory', 'easter-bunny-memory.html'],
+  ['/primespeed', 'prime-speed-check.html'],
+  ['/numberinfo', 'number-info.html'],
+  ['/snake', 'snake.html'],
+  ['/homework', 'homework-tracker.html'],
+  ['/tictactoe', 'tic-tac-toe.html'],
+  ['/connectfour', 'connect-four.html'],
+  ['/chess', 'chess.html'],
+  ['/assistant', 'assistant.html']
+]);
+
+const legacyPageRedirects = new Map([
+  ['/index.html', '/'], ['/apps.html', '/apps'],
+  ['/study-courses.html', '/studycourses'], ['/study-courses', '/studycourses'],
+  ['/pi-checker.html', '/pichecker'], ['/pi-checker', '/pichecker'],
+  ['/easter-bunny-memory.html', '/bunnymemory'], ['/easter-bunny-memory', '/bunnymemory'],
+  ['/prime-speed-check.html', '/primespeed'], ['/prime-speed-check', '/primespeed'],
+  ['/number-info.html', '/numberinfo'], ['/number-info', '/numberinfo'],
+  ['/snake.html', '/snake'],
+  ['/homework-tracker.html', '/homework'], ['/homework-tracker', '/homework'],
+  ['/tic-tac-toe.html', '/tictactoe'], ['/tic-tac-toe', '/tictactoe'],
+  ['/connect-four.html', '/connectfour'], ['/connect-four', '/connectfour'],
+  ['/chess.html', '/chess'], ['/assistant.html', '/assistant']
+]);
 
 function normalizeAnalyticsData(raw) {
   const knownIps = Array.isArray(raw && raw.knownIps) ? raw.knownIps : [];
@@ -900,8 +933,83 @@ function getClientIp(req) {
   return remote;
 }
 
+function assistantRateLimitAllows(ipAddress) {
+  const now = Date.now();
+  const recent = (assistantRateLimits.get(ipAddress || 'unknown') || [])
+    .filter((time) => now - time < 60_000);
+  if (recent.length >= 12) {
+    assistantRateLimits.set(ipAddress || 'unknown', recent);
+    return false;
+  }
+  recent.push(now);
+  assistantRateLimits.set(ipAddress || 'unknown', recent);
+  return true;
+}
+
+function normalizeAssistantMessages(rawMessages) {
+  if (!Array.isArray(rawMessages)) {
+    return [];
+  }
+  return rawMessages.slice(-12).map((message) => ({
+    role: message && message.role === 'assistant' ? 'assistant' : 'user',
+    content: String(message && message.content || '').trim().slice(0, 3000)
+  })).filter((message) => message.content);
+}
+
+function extractAssistantText(responseData) {
+  if (typeof responseData?.output_text === 'string' && responseData.output_text.trim()) {
+    return responseData.output_text.trim();
+  }
+  const textParts = [];
+  for (const item of Array.isArray(responseData?.output) ? responseData.output : []) {
+    for (const content of Array.isArray(item?.content) ? item.content : []) {
+      if ((content?.type === 'output_text' || content?.type === 'text') && typeof content.text === 'string') {
+        textParts.push(content.text);
+      }
+    }
+  }
+  return textParts.join('\n').trim();
+}
+
+async function requestAssistantReply(messages, safetyIdentifier) {
+  const controller = new AbortController();
+  const timeout = setTimeout(() => controller.abort(), 25_000);
+  try {
+    const response = await fetch('https://api.openai.com/v1/responses', {
+      method: 'POST',
+      headers: { Authorization: `Bearer ${openAiApiKey}`, 'Content-Type': 'application/json' },
+      body: JSON.stringify({
+        model: openAiModel,
+        instructions: 'You are the CG Creations learning assistant. Help students understand schoolwork and use the site. Be friendly, clear, age-appropriate, and concise. Teach the method instead of only giving an answer. Never claim you performed actions on the website. If a request is unsafe or inappropriate, decline briefly and redirect to safe educational help.',
+        input: messages,
+        reasoning: { effort: 'low' },
+        text: { verbosity: 'low' },
+        max_output_tokens: 700,
+        safety_identifier: safetyIdentifier,
+        store: false
+      }),
+      signal: controller.signal
+    });
+    const responseData = await response.json().catch(() => ({}));
+    if (!response.ok) {
+      const error = new Error(responseData?.error?.message || 'The AI service could not answer right now.');
+      error.statusCode = response.status >= 400 && response.status < 500 ? 502 : 503;
+      throw error;
+    }
+    const reply = extractAssistantText(responseData);
+    if (!reply) {
+      const error = new Error('The AI service returned an empty answer.');
+      error.statusCode = 502;
+      throw error;
+    }
+    return reply;
+  } finally {
+    clearTimeout(timeout);
+  }
+}
+
 function resolveFilePath(pathname) {
-  const requestPath = pathname === '/' ? 'index.html' : pathname.replace(/^\/+/, '');
+  const requestPath = cleanPageRoutes.get(pathname) || pathname.replace(/^\/+/, '');
   const normalized = path.normalize(requestPath);
   const filePath = path.resolve(root, normalized);
 
@@ -1210,8 +1318,42 @@ const server = http.createServer(async (req, res) => {
     return;
   }
 
+  if (req.method === 'POST' && pathname === '/api/assistant') {
+    if (!openAiApiKey) {
+      sendJson(res, 503, { error: 'The AI assistant is not configured yet. Add OPENAI_API_KEY in Render Environment.' });
+      return;
+    }
+    if (!assistantRateLimitAllows(getClientIp(req))) {
+      sendJson(res, 429, { error: 'Too many messages at once. Wait a minute, then try again.' });
+      return;
+    }
+
+    try {
+      const body = await readRequestBody(req);
+      const parsed = JSON.parse(body || '{}');
+      const messages = normalizeAssistantMessages(parsed.messages);
+      if (!messages.length || messages[messages.length - 1].role !== 'user') {
+        sendJson(res, 400, { error: 'Enter a message for the assistant.' });
+        return;
+      }
+      const visitorId = crypto.createHash('sha256').update(`cg-creations:${getClientIp(req) || 'unknown'}`).digest('hex');
+      sendJson(res, 200, { reply: await requestAssistantReply(messages, visitorId) });
+    } catch (error) {
+      const isTimeout = error && error.name === 'AbortError';
+      const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 503);
+      sendJson(res, statusCode, { error: isTimeout ? 'The assistant took too long to respond. Try again.' : error.message || 'The assistant is unavailable.' });
+    }
+    return;
+  }
+
   if (req.method !== 'GET' && req.method !== 'HEAD') {
     sendText(res, 405, 'Method Not Allowed');
+    return;
+  }
+
+  if (legacyPageRedirects.has(pathname)) {
+    res.writeHead(308, { Location: legacyPageRedirects.get(pathname) });
+    res.end();
     return;
   }
 
@@ -1236,6 +1378,10 @@ server.listen(port, async () => {
 
   if (!ipinfoToken) {
     console.log('IP geolocation logging is disabled. Set IPINFO_TOKEN to log visitor countries.');
+  }
+
+  if (!openAiApiKey) {
+    console.log('AI assistant is disabled. Set OPENAI_API_KEY to enable it.');
   }
 
 });
