@@ -1,9 +1,15 @@
 (function () {
   const kind = document.body.dataset.boardGame;
   const message = document.getElementById('game-message');
+  const intro = document.getElementById('game-intro');
+  const difficulty = document.querySelector('[data-difficulty]');
+  const helpTitle = document.getElementById('game-help-title');
+  const helpCopy = document.getElementById('game-help-copy');
   const stats = { wins: 0, draws: 0, losses: 0 };
   let level = 'medium';
+  let mode = 'ai';
   let locked = false;
+  let generation = 0;
 
   function updateStats() {
     Object.keys(stats).forEach((key) => { document.getElementById(key).textContent = String(stats[key]); });
@@ -18,6 +24,40 @@
   }
 
   function pick(items) { return items[Math.floor(Math.random() * items.length)]; }
+  function updateModeCopy() {
+    const local = mode === 'local';
+    document.getElementById('wins-label').textContent = local ? 'Player 1 Wins' : 'Wins';
+    document.getElementById('draws-label').textContent = 'Draws';
+    document.getElementById('losses-label').textContent = local ? 'Player 2 Wins' : 'Losses';
+    difficulty.hidden = local;
+    if (kind === 'tic') {
+      intro.textContent = local
+        ? 'Take turns on this device. Player 1 is X and Player 2 is O.'
+        : 'You are X. Make three in a row before the computer does.';
+      helpTitle.textContent = local ? 'Pass and play' : 'How it thinks';
+      helpCopy.textContent = local
+        ? 'Player 1 starts each round. Pass the device after every move.'
+        : 'Easy plays randomly. Medium looks for wins and blocks. Hard searches every possible ending.';
+    } else {
+      intro.textContent = local
+        ? 'Take turns on this device. Player 1 is red and Player 2 is yellow.'
+        : 'You are red. Choose a column and connect four pieces before the yellow computer.';
+      helpTitle.textContent = local ? 'Pass and play' : 'How it thinks';
+      helpCopy.textContent = local
+        ? 'Player 1 starts each round. Pass the device after every piece is dropped.'
+        : 'Easy picks open columns. Medium wins or blocks immediate threats. Hard searches ahead and values the center.';
+    }
+  }
+  function setMode(next) {
+    mode = next;
+    document.querySelectorAll('[data-mode]').forEach((button) => {
+      const selected = button.dataset.mode === mode;
+      button.classList.toggle('is-selected', selected);
+      button.setAttribute('aria-pressed', String(selected));
+    });
+    updateModeCopy();
+    start();
+  }
   function setLevel(next) {
     level = next;
     document.querySelectorAll('[data-level]').forEach((button) => button.classList.toggle('is-selected', button.dataset.level === level));
@@ -25,6 +65,7 @@
   }
 
   document.querySelectorAll('[data-level]').forEach((button) => button.addEventListener('click', () => setLevel(button.dataset.level)));
+  document.querySelectorAll('[data-mode]').forEach((button) => button.addEventListener('click', () => setMode(button.dataset.mode)));
   document.querySelector('[data-new-game]').addEventListener('click', () => start());
   window.gameScoreApi = {
     getScoreSnapshot: () => ({ ...stats }),
@@ -38,6 +79,7 @@
   if (kind === 'tic') {
     const boardEl = document.getElementById('tic-board');
     let board = Array(9).fill('');
+    let turn = 'X';
     const lines = [[0,1,2],[3,4,5],[6,7,8],[0,3,6],[1,4,7],[2,5,8],[0,4,8],[2,4,6]];
     function result(state) {
       for (const line of lines) {
@@ -74,21 +116,39 @@
     }
     function checkEnd() {
       const ended = result(board); if (!ended) return false; render(ended.line);
-      if (ended.winner === 'X') finish('wins', 'You won! Three X marks in a row.');
-      else if (ended.winner === 'O') finish('losses', 'The computer won this round. Try another plan.');
+      if (ended.winner === 'X') finish('wins', mode === 'local' ? 'Player 1 wins with three X marks in a row!' : 'You won! Three X marks in a row.');
+      else if (ended.winner === 'O') finish('losses', mode === 'local' ? 'Player 2 wins with three O marks in a row!' : 'The computer won this round. Try another plan.');
       else finish('draws', 'Draw. Every square is filled.');
       return true;
     }
     function play(index) {
-      if (locked || board[index]) return; board[index] = 'X'; render(); if (checkEnd()) return;
+      if (locked || board[index]) return;
+      board[index] = mode === 'local' ? turn : 'X';
+      render();
+      if (checkEnd()) return;
+      if (mode === 'local') {
+        turn = turn === 'X' ? 'O' : 'X';
+        message.textContent = `${turn === 'X' ? 'Player 1 (X)' : 'Player 2 (O)'}'s turn. Choose a square.`;
+        return;
+      }
       locked = true; message.textContent = 'Computer is thinking...';
-      setTimeout(() => { board[chooseMove()] = 'O'; locked = false; render(); if (!checkEnd()) message.textContent = 'Your turn. Choose a square.'; }, 280);
+      const currentGeneration = generation;
+      setTimeout(() => {
+        if (currentGeneration !== generation || mode !== 'ai') return;
+        board[chooseMove()] = 'O'; locked = false; render(); if (!checkEnd()) message.textContent = 'Your turn. Choose a square.';
+      }, 280);
     }
-    start = () => { board = Array(9).fill(''); locked = false; message.textContent = 'Your turn. Choose a square.'; render(); };
+    start = () => {
+      generation += 1;
+      board = Array(9).fill(''); turn = 'X'; locked = false;
+      message.textContent = mode === 'local' ? "Player 1 (X)'s turn. Choose a square." : 'Your turn. Choose a square.';
+      render();
+    };
   } else {
     const boardEl = document.getElementById('connect-board');
     const ROWS = 6, COLS = 7;
     let board = [];
+    let turn = 'R';
     function validColumns(state) { return Array.from({length: COLS}, (_, col) => col).filter((col) => !state[0][col]); }
     function drop(state, col, player) { for (let row = ROWS - 1; row >= 0; row--) if (!state[row][col]) { state[row][col] = player; return row; } return -1; }
     function winning(state, p) {
@@ -115,9 +175,40 @@
       let best=-Infinity,moves=[];for(const col of open){const next=clone(board);drop(next,col,'Y');const score=search(next,5,-Infinity,Infinity,false);if(score>best){best=score;moves=[col];}else if(score===best)moves.push(col);}return pick(moves);
     }
     function render(lastRow=-1,lastCol=-1) { boardEl.innerHTML=''; board.forEach((row,r)=>row.forEach((piece,c)=>{const cell=document.createElement('button');cell.type='button';cell.className=`connect-cell ${piece==='R'?'red':piece==='Y'?'yellow':''}${r===lastRow&&c===lastCol?' last':''}`;cell.setAttribute('aria-label',`Column ${c+1}${piece?`, ${piece==='R'?'red':'yellow'}`:', empty'}`);cell.addEventListener('click',()=>play(c));boardEl.appendChild(cell);})); }
-    function checkEnd(player) { if(winning(board,player)){finish(player==='R'?'wins':'losses',player==='R'?'You connected four!':'The computer connected four. Try again.');return true;}if(!validColumns(board).length){finish('draws','Draw. The board is full.');return true;}return false; }
-    function play(col) { if(locked||!validColumns(board).includes(col))return;const row=drop(board,col,'R');render(row,col);if(checkEnd('R'))return;locked=true;message.textContent='Computer is thinking...';setTimeout(()=>{const aiCol=chooseMove();const aiRow=drop(board,aiCol,'Y');locked=false;render(aiRow,aiCol);if(!checkEnd('Y'))message.textContent='Your turn. Choose a column.';},320); }
-    start=()=>{board=Array.from({length:ROWS},()=>Array(COLS).fill(''));locked=false;message.textContent='Your turn. Choose a column.';render();};
+    function checkEnd(player) {
+      if (winning(board, player)) {
+        const copy = mode === 'local'
+          ? `${player === 'R' ? 'Player 1 (red)' : 'Player 2 (yellow)'} connected four!`
+          : player === 'R' ? 'You connected four!' : 'The computer connected four. Try again.';
+        finish(player === 'R' ? 'wins' : 'losses', copy);
+        return true;
+      }
+      if (!validColumns(board).length) { finish('draws', 'Draw. The board is full.'); return true; }
+      return false;
+    }
+    function play(col) {
+      if (locked || !validColumns(board).includes(col)) return;
+      const player = mode === 'local' ? turn : 'R';
+      const row = drop(board, col, player); render(row, col); if (checkEnd(player)) return;
+      if (mode === 'local') {
+        turn = turn === 'R' ? 'Y' : 'R';
+        message.textContent = `${turn === 'R' ? 'Player 1 (red)' : 'Player 2 (yellow)'}'s turn. Choose a column.`;
+        return;
+      }
+      locked = true; message.textContent = 'Computer is thinking...';
+      const currentGeneration = generation;
+      setTimeout(() => {
+        if (currentGeneration !== generation || mode !== 'ai') return;
+        const aiCol = chooseMove(); const aiRow = drop(board, aiCol, 'Y'); locked = false; render(aiRow, aiCol); if (!checkEnd('Y')) message.textContent = 'Your turn. Choose a column.';
+      }, 320);
+    }
+    start = () => {
+      generation += 1;
+      board = Array.from({length:ROWS},()=>Array(COLS).fill('')); turn = 'R'; locked = false;
+      message.textContent = mode === 'local' ? "Player 1 (red)'s turn. Choose a column." : 'Your turn. Choose a column.';
+      render();
+    };
   }
+  updateModeCopy();
   start();
 }());
