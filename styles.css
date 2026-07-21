@@ -3646,11 +3646,11 @@ button.secondary.is-selected,
 .connect-turn-card .game-message { min-height: 0; padding: 0; background: transparent; color: #fff; font: 800 clamp(.85rem, 1.4vw, 1.03rem)/1.25 "Aptos", "Trebuchet MS", sans-serif; }
 .connect-draw-count { display: flex; align-items: center; gap: 6px; color: #c7e9ff; font: 700 .72rem/1 "Aptos", sans-serif; }
 .connect-draw-count strong { display: grid; place-items: center; min-width: 24px; height: 24px; border-radius: 9px; background: rgba(255,255,255,.16); color: #fff; }
-.connect-board-shell { width: min(960px, 100%); margin: 0 auto; padding: clamp(10px, 1.7vw, 20px); border: 1px solid #438ed1; border-radius: 34px; background: linear-gradient(145deg, #dcedff, #fff5dc); box-shadow: inset 0 0 0 7px rgba(255,255,255,.5), 0 18px 40px rgba(6,75,158,.17); }
-.connect-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: clamp(5px, .8vw, 12px); padding: clamp(10px, 1.5vw, 22px); border: 5px solid #173a70; border-bottom-width: 15px; border-radius: 30px; background: linear-gradient(155deg, #5d83c6, #3269b6 58%, #205397); box-shadow: inset 0 9px 18px rgba(255,255,255,.2), 0 8px 0 #102d5c, 0 18px 30px rgba(4,49,107,.2); }
-.connect-cell { position: relative; min-width: 0; aspect-ratio: 1; padding: 0; border: 3px solid rgba(3,46,100,.34); border-radius: 50%; background: #eef8ff; box-shadow: inset 0 6px 12px rgba(4,43,90,.38), 0 3px 0 rgba(255,255,255,.28); }
-.connect-cell.red { border-color: #8e1224; background: radial-gradient(circle at 36% 28%, #ff8b91 0 9%, #f04452 30%, #bd182c 76%); box-shadow: inset 0 -8px 13px rgba(92,4,19,.34), 0 5px 10px rgba(122,17,35,.24); }
-.connect-cell.yellow { border-color: #bd7e00; background: radial-gradient(circle at 36% 28%, #fff1a3 0 9%, #ffd447 30%, #eaa300 76%); box-shadow: inset 0 -8px 13px rgba(126,76,0,.28), 0 5px 10px rgba(151,97,0,.24); }
+.connect-board-shell { width: min(820px, 100%); margin: 0 auto; padding: 0; border: 0; border-radius: 30px; background: transparent; box-shadow: none; }
+.connect-board { display: grid; grid-template-columns: repeat(7, 1fr); gap: clamp(7px, 1.15vw, 11px); padding: clamp(12px, 1.8vw, 19px); border: 2px solid #263653; border-radius: 30px; background: #5d78ab; box-shadow: 0 12px 0 #344c7b, 0 24px 0 #202d49; }
+.connect-cell { position: relative; min-width: 0; aspect-ratio: 1; padding: 0; border: clamp(3px, .55vw, 6px) solid #b9b9b0; border-radius: 50%; background: #f5f1df; box-shadow: none; }
+.connect-cell.red { border-color: #b45e73; background: #cf7086; box-shadow: none; }
+.connect-cell.yellow { border-color: #c7ad53; background: #ecd065; box-shadow: none; }
 .connect-cell.last { animation: dropPop .35s ease-out; }
 .connect-board-actions { justify-content: center; margin: 28px auto 18px; }
 .connect-board-actions button { min-width: 126px; }
@@ -3713,8 +3713,8 @@ button.secondary.is-selected,
   .connect-score-number { flex-basis: 38px; width: 38px; border-radius: 13px; font-size: 1.15rem; }
   .connect-team-name strong { font-size: .8rem; }
   .connect-team-name span { font-size: .57rem; }
-  .connect-board-shell { padding: 5px; border-radius: 20px; }
-  .connect-board { gap: 3px; padding: 6px; border-width: 3px; border-bottom-width: 9px; border-radius: 16px; box-shadow: inset 0 6px 12px rgba(255,255,255,.18), 0 5px 0 #102d5c, 0 12px 20px rgba(4,49,107,.18); }
+  .connect-board-shell { border-radius: 16px; }
+  .connect-board { gap: 4px; padding: 7px; border-width: 1px; border-radius: 16px; box-shadow: 0 6px 0 #344c7b, 0 12px 0 #202d49; }
   .connect-cell { border-width: 2px; }
   .connect-board-actions { margin-top: 22px; }
   .assistant-header { padding: 28px 22px; }
