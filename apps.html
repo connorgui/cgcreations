@@ -5,45 +5,36 @@
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
   <meta name="description" content="Browse every CG Creations learning tool, organizer, and game.">
   <title>Apps | CG Creations</title>
-  <link rel="stylesheet" href="/apps-theme.css?v=20260810a">
+  <link rel="stylesheet" href="/apps-theme.css?v=20260810b">
 </head>
-<body class="modern-home blue-site apps-page">
+<body class="apps-page classic-brown-apps">
   <main id="apps-top" class="app home-app">
     <section class="home-shell">
-      <header class="site-nav">
-        <a class="site-logo" href="/"><span class="site-logo-mark">CG</span><span>Creations<span class="site-logo-dot">.</span></span></a>
-        <nav class="site-nav-links" aria-label="Main navigation"><a href="/">Home</a><a class="is-current" href="/apps">Apps</a><a href="/studycourses">Study</a><a href="/assistant">AI Assistant</a></nav>
-      </header>
-
-      <section class="apps-page-hero">
-        <p class="eyebrow"><span class="eyebrow-dot"></span> The complete collection</p>
-        <h1>Choose what you want to <span>create next.</span></h1>
-        <p>Study, organize, calculate, practice your memory, or challenge an AI opponent.</p>
+      <div class="home-header">
+        <p class="eyebrow">Creations</p>
+        <h1>What Can You Explore Here?</h1>
+        <p class="home-subtitle">A growing set of tools, experiments, and more.</p>
         <div class="app-filter-row" role="group" aria-label="Filter apps">
           <button class="app-filter is-selected" type="button" data-filter="all">All apps</button>
           <button class="app-filter" type="button" data-filter="learning">Learning</button>
           <button class="app-filter" type="button" data-filter="tools">Tools</button>
           <button class="app-filter" type="button" data-filter="games">Games</button>
         </div>
-      </section>
+      </div>
 
-      <section class="creations-section apps-catalog" aria-labelledby="creations-title">
-        <div class="creations-heading"><div><p class="eyebrow">11 active creations</p><h2 id="creations-title">The app gallery</h2></div><p>Every card opens the full app. Use the filters to narrow the list.</p></div>
-        <div class="creations-grid" id="apps-grid">
-          <a class="creation-card creation-card-active creation-card-featured" data-category="learning" href="/studycourses" data-auth-prompt-link="true" data-auth-prompt-label="Study Courses"><div class="creation-card-top"><div class="creation-icon study-icon">A+</div><span class="creation-tag">Learning</span></div><h3>Study Courses</h3><p>Practice reading, writing, and math with fresh level-based questions.</p><span class="creation-link">Open app <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="tools" href="/homework" data-auth-prompt-link="true" data-auth-prompt-label="Homework Tracker"><div class="creation-card-top"><div class="creation-icon homework-icon">&#9998;</div><span class="creation-tag">Planner</span></div><h3>Homework Tracker</h3><p>Save, complete, and archive assignments across signed-in devices.</p><span class="creation-link">Open app <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="learning" href="/assistant"><div class="creation-card-top"><div class="creation-icon assistant-icon">AI</div><span class="creation-tag">New</span></div><h3>AI Assistant</h3><p>Ask for clear explanations, study help, examples, and guidance.</p><span class="creation-link">Start a chat <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="learning" href="/pichecker" data-auth-prompt-link="true" data-auth-prompt-label="Pi Voice Checker"><div class="creation-card-top"><div class="creation-icon pi-icon">&pi;</div><span class="creation-tag">Voice</span></div><h3>Pi Voice Checker</h3><p>Recite Pi aloud and build a saved personal record.</p><span class="creation-link">Open app <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="games" href="/tictactoe" data-auth-prompt-link="true" data-auth-prompt-label="Tic Tac Toe"><div class="creation-card-top"><div class="creation-icon ttt-icon">XO</div><span class="creation-tag">Strategy</span></div><h3>Tic Tac Toe</h3><p>Play against three AI levels or challenge someone beside you.</p><span class="creation-link">Play now <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="games" href="/connectfour" data-auth-prompt-link="true" data-auth-prompt-label="Connect Four"><div class="creation-card-top"><div class="creation-icon connect-icon">4</div><span class="creation-tag">Strategy</span></div><h3>Connect Four</h3><p>Plan your drops against the computer or a local second player.</p><span class="creation-link">Play now <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="games" href="/chess" data-auth-prompt-link="true" data-auth-prompt-label="Chess"><div class="creation-card-top"><div class="creation-icon chess-icon">&#9816;</div><span class="creation-tag">Strategy</span></div><h3>Chess</h3><p>Play a complete match against AI or another person on your device.</p><span class="creation-link">Play now <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="games" href="/bunnymemory" data-auth-prompt-link="true" data-auth-prompt-label="Easter Bunny Memory"><div class="creation-card-top"><div class="creation-icon bunny-icon">&#128007;</div><span class="creation-tag">Memory</span></div><h3>Easter Bunny Memory</h3><p>Track the real bunny through shuffles, decoys, and tricks.</p><span class="creation-link">Play now <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="learning" href="/primespeed" data-auth-prompt-link="true" data-auth-prompt-label="Prime Speed Check"><div class="creation-card-top"><div class="creation-icon prime-icon">P</div><span class="creation-tag">Math</span></div><h3>Prime Speed Check</h3><p>Judge prime numbers quickly across several levels.</p><span class="creation-link">Open app <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="tools" href="/numberinfo"><div class="creation-card-top"><div class="creation-icon number-info-icon">#</div><span class="creation-tag">Numbers</span></div><h3>Number Information</h3><p>Find factors, primality, GCF, LCM, and number facts.</p><span class="creation-link">Open app <span>&rarr;</span></span></a>
-          <a class="creation-card creation-card-active" data-category="games" href="/snake" data-auth-prompt-link="true" data-auth-prompt-label="Classic Snake"><div class="creation-card-top"><div class="creation-icon snake-icon">S</div><span class="creation-tag">Arcade</span></div><h3>Classic Snake</h3><p>Grow your snake and chase a new personal best.</p><span class="creation-link">Play now <span>&rarr;</span></span></a>
-        </div>
+      <section class="creations-grid" id="apps-grid" aria-label="Creations tools">
+        <a class="creation-card creation-card-active" data-category="learning" href="/studycourses" data-auth-prompt-link="true" data-auth-prompt-label="Study Courses"><div class="creation-icon study-icon">A+</div><h2>Study Courses</h2><p>Practice reading, writing, and math with fresh level-based questions.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="tools" href="/homework" data-auth-prompt-link="true" data-auth-prompt-label="Homework Tracker"><div class="creation-icon homework-icon">&#9998;</div><h2>Homework Tracker</h2><p>Save, complete, and archive assignments across signed-in devices.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="learning" href="/assistant"><div class="creation-icon assistant-icon">AI</div><h2>AI Assistant</h2><p>Ask for clear explanations, study help, examples, and guidance.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="learning" href="/pichecker" data-auth-prompt-link="true" data-auth-prompt-label="Pi Voice Checker"><div class="creation-icon pi-icon">&pi;</div><h2>Pi Voice Checker</h2><p>Recite Pi aloud and build a saved personal record.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="games" href="/tictactoe" data-auth-prompt-link="true" data-auth-prompt-label="Tic Tac Toe"><div class="creation-icon ttt-icon">XO</div><h2>Tic Tac Toe</h2><p>Play against three AI levels or challenge someone beside you.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="games" href="/connectfour" data-auth-prompt-link="true" data-auth-prompt-label="Connect Four"><div class="creation-icon connect-icon">4</div><h2>Connect Four</h2><p>Plan your drops against the computer or a local second player.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="games" href="/chess" data-auth-prompt-link="true" data-auth-prompt-label="Chess"><div class="creation-icon chess-icon">&#9816;</div><h2>Chess</h2><p>Play a complete match against AI or another person on your device.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="games" href="/bunnymemory" data-auth-prompt-link="true" data-auth-prompt-label="Easter Bunny Memory"><div class="creation-icon bunny-icon">&#128007;</div><h2>Easter Bunny Memory</h2><p>Track the real bunny through shuffles, decoys, and tricks.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="learning" href="/primespeed" data-auth-prompt-link="true" data-auth-prompt-label="Prime Speed Check"><div class="creation-icon prime-icon">P</div><h2>Prime Speed Check</h2><p>Judge prime numbers quickly across several levels.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="tools" href="/numberinfo"><div class="creation-icon number-info-icon">#</div><h2>Number Information</h2><p>Find factors, primality, GCF, LCM, and number facts.</p><span class="creation-link">Open</span></a>
+        <a class="creation-card creation-card-active" data-category="games" href="/snake" data-auth-prompt-link="true" data-auth-prompt-label="Classic Snake"><div class="creation-icon snake-icon">S</div><h2>Classic Snake</h2><p>Grow your snake and chase a new personal best.</p><span class="creation-link">Open</span></a>
       </section>
-      <footer class="site-footer"><a class="site-logo" href="/"><span class="site-logo-mark">CG</span><span>Creations<span class="site-logo-dot">.</span></span></a><p>Tools, learning, games, and more.</p><a href="#apps-top">Back to top &uarr;</a></footer>
     </section>
   </main>
   <script src="/analytics.js?v=20260307a"></script>
