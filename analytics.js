@@ -1,4 +1,16 @@
 (function () {
+  const preferenceKey = 'cg_cookie_preferences_v1';
+  let visitTracked = false;
+
+  function analyticsAllowed() {
+    try {
+      const preferences = JSON.parse(window.localStorage.getItem(preferenceKey) || 'null');
+      return Boolean(preferences && preferences.analytics === true);
+    } catch {
+      return false;
+    }
+  }
+
   async function trackVisitor() {
     const response = await fetch('/api/visit', {
       method: 'POST',
@@ -33,15 +45,24 @@
     const uniqueUsersEl = document.getElementById('unique-users');
     let tracked = false;
 
-    try {
-      const registration = await trackVisitor();
-      renderAnalytics(registration);
-      tracked = true;
-    } catch (error) {
-      if (uniqueUsersEl) {
-        uniqueUsersEl.title = error.message;
+    async function registerAllowedVisit() {
+      if (!analyticsAllowed() || visitTracked) return;
+      try {
+        const registration = await trackVisitor();
+        renderAnalytics(registration);
+        tracked = true;
+        visitTracked = true;
+      } catch (error) {
+        if (uniqueUsersEl) {
+          uniqueUsersEl.title = error.message;
+        }
       }
     }
+
+    await registerAllowedVisit();
+    window.addEventListener('cg:privacy-preferences', (event) => {
+      if (event.detail && event.detail.analytics) registerAllowedVisit();
+    });
 
     try {
       const analytics = await fetchAnalytics();

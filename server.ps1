@@ -79,7 +79,9 @@ try {
       'primespeed' = 'prime-speed-check.html'; 'numberinfo' = 'number-info.html';
       'snake' = 'snake.html'; 'homework' = 'homework-tracker.html';
       'tictactoe' = 'tic-tac-toe.html'; 'connectfour' = 'connect-four.html';
-      'chess' = 'chess.html'; 'assistant' = 'assistant.html'
+      'chess' = 'chess.html'; 'assistant' = 'assistant.html';
+      'trust' = 'trust.html'; 'about' = 'about.html'; 'privacy' = 'privacy.html';
+      'cookies' = 'cookies.html'; 'terms' = 'terms.html'; 'contact' = 'contact.html'
     }
 
     if ($request.HttpMethod -eq 'GET' -and $path -eq 'api/analytics') {

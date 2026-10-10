@@ -34,7 +34,13 @@ const cleanPageRoutes = new Map([
   ['/tictactoe', 'tic-tac-toe.html'],
   ['/connectfour', 'connect-four.html'],
   ['/chess', 'chess.html'],
-  ['/assistant', 'assistant.html']
+  ['/assistant', 'assistant.html'],
+  ['/trust', 'trust.html'],
+  ['/about', 'about.html'],
+  ['/privacy', 'privacy.html'],
+  ['/cookies', 'cookies.html'],
+  ['/terms', 'terms.html'],
+  ['/contact', 'contact.html']
 ]);
 
 const legacyPageRedirects = new Map([
@@ -48,7 +54,10 @@ const legacyPageRedirects = new Map([
   ['/homework-tracker.html', '/homework'], ['/homework-tracker', '/homework'],
   ['/tic-tac-toe.html', '/tictactoe'], ['/tic-tac-toe', '/tictactoe'],
   ['/connect-four.html', '/connectfour'], ['/connect-four', '/connectfour'],
-  ['/chess.html', '/chess'], ['/assistant.html', '/assistant']
+  ['/chess.html', '/chess'], ['/assistant.html', '/assistant'],
+  ['/trust.html', '/trust'], ['/about.html', '/about'],
+  ['/privacy.html', '/privacy'], ['/cookies.html', '/cookies'],
+  ['/terms.html', '/terms'], ['/contact.html', '/contact']
 ]);
 
 function normalizeAnalyticsData(raw) {
@@ -394,17 +403,23 @@ function appendCookieHeader(res, cookieValue) {
   res.setHeader('Set-Cookie', [existing, cookieValue]);
 }
 
-function setSessionCookie(res, token) {
+function isSecureRequest(req) {
+  return req.socket.encrypted || String(req.headers['x-forwarded-proto'] || '').split(',')[0].trim() === 'https';
+}
+
+function setSessionCookie(req, res, token) {
+  const secureAttribute = isSecureRequest(req) ? '; Secure' : '';
   appendCookieHeader(
     res,
-    `${sessionCookieName}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax; Max-Age=${Math.floor(sessionDurationMs / 1000)}`
+    `${sessionCookieName}=${encodeURIComponent(token)}; Path=/; HttpOnly; SameSite=Lax${secureAttribute}; Max-Age=${Math.floor(sessionDurationMs / 1000)}`
   );
 }
 
-function clearSessionCookie(res) {
+function clearSessionCookie(req, res) {
+  const secureAttribute = isSecureRequest(req) ? '; Secure' : '';
   appendCookieHeader(
     res,
-    `${sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax; Max-Age=0`
+    `${sessionCookieName}=; Path=/; HttpOnly; SameSite=Lax${secureAttribute}; Max-Age=0`
   );
 }
 
@@ -898,11 +913,24 @@ function getContentType(filePath) {
 function sendJson(res, statusCode, data, extraHeaders = {}) {
   const body = JSON.stringify(data);
   res.writeHead(statusCode, {
+    'Cache-Control': 'no-store',
     ...extraHeaders,
     'Content-Type': 'application/json; charset=utf-8',
     'Content-Length': Buffer.byteLength(body)
   });
   res.end(body);
+}
+
+function applySecurityHeaders(req, res) {
+  res.setHeader('X-Content-Type-Options', 'nosniff');
+  res.setHeader('X-Frame-Options', 'DENY');
+  res.setHeader('Referrer-Policy', 'strict-origin-when-cross-origin');
+  res.setHeader('Permissions-Policy', 'camera=(), geolocation=(), payment=(), usb=(), microphone=(self)');
+  res.setHeader('Cross-Origin-Opener-Policy', 'same-origin');
+  res.setHeader('Content-Security-Policy', "default-src 'self'; script-src 'self' 'unsafe-inline'; style-src 'self' 'unsafe-inline' https://fonts.googleapis.com; font-src 'self' https://fonts.gstatic.com data:; img-src 'self' data: blob:; connect-src 'self'; media-src 'self' blob:; object-src 'none'; base-uri 'self'; frame-ancestors 'none'; form-action 'self'");
+  if (isSecureRequest(req)) {
+    res.setHeader('Strict-Transport-Security', 'max-age=31536000; includeSubDomains');
+  }
 }
 
 function sendText(res, statusCode, body, contentType = 'text/plain; charset=utf-8', extraHeaders = {}) {
@@ -1043,6 +1071,7 @@ function readRequestBody(req) {
 }
 
 const server = http.createServer(async (req, res) => {
+  applySecurityHeaders(req, res);
   const url = new URL(req.url, `http://${req.headers.host || 'localhost'}`);
   const pathname = url.pathname;
 
@@ -1068,7 +1097,7 @@ const server = http.createServer(async (req, res) => {
       const parsed = JSON.parse(body || '{}');
       const user = await createUserAccount(parsed.username, parsed.password, parsed.profileData || {});
       const token = await createSessionForUser(user.id);
-      setSessionCookie(res, token);
+      setSessionCookie(req, res, token);
       sendJson(res, 201, {
         signedIn: true,
         username: user.username,
@@ -1102,7 +1131,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       const token = await createSessionForUser(user.id);
-      setSessionCookie(res, token);
+      setSessionCookie(req, res, token);
       sendJson(res, 200, {
         signedIn: true,
         username: user.username,
@@ -1158,7 +1187,7 @@ const server = http.createServer(async (req, res) => {
       }
 
       await deleteUserAccount(user.id);
-      clearSessionCookie(res);
+      clearSessionCookie(req, res);
       sendJson(res, 200, { ok: true });
     } catch (error) {
       const statusCode = error.statusCode || (error instanceof SyntaxError ? 400 : 500);
@@ -1171,7 +1200,7 @@ const server = http.createServer(async (req, res) => {
     try {
       const cookies = parseCookies(req);
       await deleteSessionToken(cookies[sessionCookieName]);
-      clearSessionCookie(res);
+      clearSessionCookie(req, res);
       sendJson(res, 200, { signedIn: false });
     } catch (error) {
       sendJson(res, error.statusCode || 500, { error: error.message || 'Failed to sign out.' });
