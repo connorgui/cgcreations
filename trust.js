@@ -52,7 +52,7 @@
     if (document.querySelector('link[href^="/trust.css"]')) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "/trust.css?v=20261011a";
+    link.href = "/trust.css?v=20261011b";
     document.head.appendChild(link);
   }
 
@@ -166,18 +166,12 @@
     shell.className = "terms-ui";
     shell.innerHTML = `
       <div class="terms-modal" hidden>
-        <button class="terms-modal-backdrop" type="button" aria-label="Dismiss terms and conditions"></button>
-        <section class="terms-modal-card" role="dialog" aria-modal="true" aria-labelledby="terms-dialog-title" aria-describedby="terms-dialog-description">
+        <section class="terms-modal-card" role="dialog" aria-modal="false" aria-labelledby="terms-dialog-title" aria-describedby="terms-dialog-description">
           <button class="terms-modal-close" type="button" aria-label="Dismiss terms and conditions">&times;</button>
           <p class="cookie-kicker">First-visit notice</p>
           <h2 id="terms-dialog-title">Terms &amp; Conditions</h2>
-          <p id="terms-dialog-description">Please review the basic rules for using CG Creations. Learning tools and AI responses can make mistakes, accounts must be used responsibly, and the website may change or occasionally be unavailable.</p>
-          <ul>
-            <li>Use the website lawfully and do not interfere with its security.</li>
-            <li>Check important schoolwork and AI answers with a trusted source.</li>
-            <li>Keep your account password private and do not access another person's account.</li>
-          </ul>
-          <p class="terms-read-more">Read the complete <a href="/terms">Terms of Use</a> and <a href="/privacy">Privacy Notice</a>.</p>
+          <p id="terms-dialog-description">You can keep using the website while this notice is open. Please use CG Creations responsibly and check important learning or AI answers with a trusted source.</p>
+          <p class="terms-read-more">Read the <a href="/terms">Terms of Use</a> and <a href="/privacy">Privacy Notice</a>.</p>
           <div class="terms-actions">
             <button class="terms-disagree" type="button" data-terms-choice="declined">Disagree</button>
             <button class="terms-agree" type="button" data-terms-choice="accepted">Agree</button>
@@ -202,7 +196,6 @@
     }
 
     closeButton.addEventListener("click", () => finish("dismissed"));
-    shell.querySelector(".terms-modal-backdrop").addEventListener("click", () => finish("dismissed"));
     shell.querySelectorAll("[data-terms-choice]").forEach((button) => {
       button.addEventListener("click", () => finish(button.dataset.termsChoice));
     });
