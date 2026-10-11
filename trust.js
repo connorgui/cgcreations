@@ -1,6 +1,29 @@
 (function () {
   const preferenceKey = "cg_cookie_preferences_v1";
   const preferenceEvent = "cg:privacy-preferences";
+  const termsKey = "cg_terms_choice_v1";
+  const termsVersion = "2026-10-11";
+  const termsEvent = "cg:terms-choice";
+
+  function loadTermsChoice() {
+    try {
+      const saved = JSON.parse(window.localStorage.getItem(termsKey) || "null");
+      const validChoices = ["accepted", "declined", "dismissed"];
+      if (saved && saved.version === termsVersion && validChoices.includes(saved.choice)) {
+        return saved;
+      }
+    } catch {
+      // A malformed choice is treated as a first visit.
+    }
+    return null;
+  }
+
+  function saveTermsChoice(choice) {
+    const saved = { choice, version: termsVersion, updatedAt: new Date().toISOString() };
+    window.localStorage.setItem(termsKey, JSON.stringify(saved));
+    window.dispatchEvent(new CustomEvent(termsEvent, { detail: saved }));
+    return saved;
+  }
 
   function loadPreferences() {
     try {
@@ -29,7 +52,7 @@
     if (document.querySelector('link[href^="/trust.css"]')) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "/trust.css?v=20261004a";
+    link.href = "/trust.css?v=20261011a";
     document.head.appendChild(link);
   }
 
@@ -50,6 +73,7 @@
           <a href="/cookies">Cookies</a>
           <a href="/terms">Terms</a>
           <a href="/contact">Contact &amp; Safety</a>
+          <button type="button" data-terms-settings>Terms choice</button>
           <button type="button" data-cookie-settings>Cookie settings</button>
         </nav>
         <p class="trust-footer-note">Secure connection &bull; Passwords are hashed &bull; Account deletion available</p>
@@ -130,16 +154,81 @@
       button.addEventListener("click", openModal);
     });
 
-    if (!loadPreferences()) banner.hidden = false;
+    return {
+      showBanner() {
+        if (!loadPreferences()) banner.hidden = false;
+      }
+    };
+  }
+
+  function createTermsUi(onComplete) {
+    const shell = document.createElement("div");
+    shell.className = "terms-ui";
+    shell.innerHTML = `
+      <div class="terms-modal" hidden>
+        <button class="terms-modal-backdrop" type="button" aria-label="Dismiss terms and conditions"></button>
+        <section class="terms-modal-card" role="dialog" aria-modal="true" aria-labelledby="terms-dialog-title" aria-describedby="terms-dialog-description">
+          <button class="terms-modal-close" type="button" aria-label="Dismiss terms and conditions">&times;</button>
+          <p class="cookie-kicker">First-visit notice</p>
+          <h2 id="terms-dialog-title">Terms &amp; Conditions</h2>
+          <p id="terms-dialog-description">Please review the basic rules for using CG Creations. Learning tools and AI responses can make mistakes, accounts must be used responsibly, and the website may change or occasionally be unavailable.</p>
+          <ul>
+            <li>Use the website lawfully and do not interfere with its security.</li>
+            <li>Check important schoolwork and AI answers with a trusted source.</li>
+            <li>Keep your account password private and do not access another person's account.</li>
+          </ul>
+          <p class="terms-read-more">Read the complete <a href="/terms">Terms of Use</a> and <a href="/privacy">Privacy Notice</a>.</p>
+          <div class="terms-actions">
+            <button class="terms-disagree" type="button" data-terms-choice="declined">Disagree</button>
+            <button class="terms-agree" type="button" data-terms-choice="accepted">Agree</button>
+          </div>
+          <p class="terms-detail">Your selection is saved only in this browser. Closing with X records that the notice was dismissed.</p>
+        </section>
+      </div>`;
+    document.body.appendChild(shell);
+
+    const modal = shell.querySelector(".terms-modal");
+    const closeButton = shell.querySelector(".terms-modal-close");
+
+    function openModal() {
+      modal.hidden = false;
+      closeButton.focus();
+    }
+
+    function finish(choice) {
+      saveTermsChoice(choice);
+      modal.hidden = true;
+      onComplete();
+    }
+
+    closeButton.addEventListener("click", () => finish("dismissed"));
+    shell.querySelector(".terms-modal-backdrop").addEventListener("click", () => finish("dismissed"));
+    shell.querySelectorAll("[data-terms-choice]").forEach((button) => {
+      button.addEventListener("click", () => finish(button.dataset.termsChoice));
+    });
+    document.addEventListener("keydown", (event) => {
+      if (event.key === "Escape" && !modal.hidden) finish("dismissed");
+    });
+    document.querySelectorAll("[data-terms-settings]").forEach((button) => {
+      button.addEventListener("click", openModal);
+    });
+
+    if (loadTermsChoice()) {
+      onComplete();
+    } else {
+      openModal();
+    }
   }
 
   function init() {
     addStylesheet();
     createTrustFooter();
-    createPrivacyUi();
+    const privacyUi = createPrivacyUi();
+    createTermsUi(privacyUi.showBanner);
   }
 
   window.cgPrivacy = { loadPreferences, savePreferences, preferenceKey, preferenceEvent };
+  window.cgTerms = { loadTermsChoice, saveTermsChoice, termsKey, termsVersion, termsEvent };
   if (document.readyState === "loading") {
     document.addEventListener("DOMContentLoaded", init, { once: true });
   } else {

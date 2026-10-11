@@ -21,7 +21,7 @@
 
 .privacy-ui { font-family: "Aptos", "Trebuchet MS", sans-serif; }
 .cookie-banner { position: fixed; z-index: 10000; left: 20px; right: 20px; bottom: 20px; display: flex; align-items: center; justify-content: space-between; gap: 28px; width: min(1120px, calc(100% - 40px)); margin: auto; padding: 22px 24px; border: 1px solid #d7b095; border-radius: 22px; color: #17293c; background: rgba(255, 251, 246, .98); box-shadow: 0 24px 70px rgba(24, 36, 50, .25); }
-.cookie-banner[hidden], .cookie-modal[hidden] { display: none !important; }
+.cookie-banner[hidden], .cookie-modal[hidden], .terms-modal[hidden] { display: none !important; }
 .cookie-banner h2, .cookie-modal h2 { margin: 3px 0 7px; color: #17293c; font: 700 1.35rem/1.15 Georgia, serif; }
 .cookie-banner p, .cookie-modal p { margin: 0; color: #536475; font-size: .9rem; line-height: 1.5; }
 .cookie-banner a { display: inline-block; margin-top: 7px; color: #8f4124; font-weight: 700; }
@@ -42,10 +42,31 @@
 .cookie-choice input { flex: 0 0 auto; width: 24px; height: 24px; box-shadow: none; accent-color: #9f4d2d; }
 .cookie-detail { margin: 16px 0 !important; font-size: .8rem !important; }
 
+.terms-ui { font-family: "Aptos", "Trebuchet MS", sans-serif; }
+.terms-modal { position: fixed; z-index: 10002; inset: 0; display: grid; place-items: center; padding: 18px; }
+.terms-modal-backdrop { position: absolute; inset: 0; width: 100%; border: 0; border-radius: 0; background: rgba(12, 24, 37, .68); box-shadow: none; }
+.terms-modal-card { position: relative; z-index: 1; width: min(620px, 100%); max-height: min(760px, calc(100vh - 36px)); overflow: auto; padding: 30px; border: 1px solid #d8bca7; border-radius: 26px; color: #17293c; background: #fffaf5; box-shadow: 0 30px 90px rgba(12, 24, 37, .38); }
+.terms-modal-card h2 { margin: 4px 48px 10px 0; color: #17293c; font: 700 1.7rem/1.15 Georgia, serif; }
+.terms-modal-card p, .terms-modal-card li { color: #536475; font-size: .94rem; line-height: 1.55; }
+.terms-modal-card ul { margin: 18px 0; padding-left: 22px; }
+.terms-modal-card li + li { margin-top: 8px; }
+.terms-modal-card a { color: #8f4124; font-weight: 800; }
+.terms-modal-close { position: absolute; top: 14px; right: 14px; min-width: 40px; width: 40px; height: 40px; padding: 0; border: 1px solid #dcc3af; border-radius: 50%; color: #593b2d; background: #f7ece3; box-shadow: none; font-size: 1.4rem; }
+.terms-modal-close:hover { color: #3f2c23; background: #ecddcf; box-shadow: none; }
+.terms-read-more { margin: 0 0 18px; }
+.terms-actions { display: grid; grid-template-columns: 1fr 1fr; gap: 12px; }
+.terms-actions button { min-width: 0; margin: 0; padding: 13px 18px; border-radius: 999px; font: 800 .92rem/1 "Aptos", sans-serif; box-shadow: none; }
+.terms-agree { border: 1px solid #8f4124; color: #fff; background: #9f4d2d; }
+.terms-agree:hover { color: #fff; background: #7e371f; box-shadow: none; }
+.terms-disagree { border: 1px solid #cdb39e; color: #5e4436; background: #f6ede5; }
+.terms-disagree:hover { color: #3f2c23; background: #ecddcf; box-shadow: none; }
+.terms-detail { margin: 14px 0 0 !important; font-size: .76rem !important; }
+
 @media (max-width: 720px) {
   .trust-footer-brand, .cookie-banner { align-items: flex-start; flex-direction: column; }
   .cookie-actions { width: 100%; justify-content: stretch; }
   .cookie-actions button { flex: 1 1 140px; }
   .cookie-banner { bottom: 10px; width: calc(100% - 20px); padding: 18px; }
   .cookie-choice { align-items: flex-start; }
+  .terms-modal-card { padding: 24px 20px; border-radius: 22px; }
 }
