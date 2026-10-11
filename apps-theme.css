@@ -3012,6 +3012,80 @@ button.secondary.is-selected,
   }
 }
 
+/* Apps gallery navigation. Kept separate from the back links inside individual apps. */
+.classic-brown-apps .home-shell {
+  position: relative;
+}
+
+.classic-brown-apps .apps-back-link {
+  display: inline-flex;
+  align-items: center;
+  gap: 10px;
+  min-height: 48px;
+  margin: 0 0 24px;
+  padding: 7px 17px 7px 8px;
+  border: 1px solid rgba(79, 52, 38, 0.24);
+  border-radius: 999px;
+  color: #4f3426;
+  background: rgba(255, 252, 246, 0.9);
+  box-shadow: 0 9px 22px rgba(79, 52, 38, 0.1);
+  font: 700 0.88rem/1 "Bricolage Grotesque", sans-serif;
+  text-decoration: none;
+  transition: transform 180ms ease, border-color 180ms ease, box-shadow 180ms ease;
+}
+
+.classic-brown-apps .apps-back-arrow {
+  display: grid;
+  width: 34px;
+  height: 34px;
+  place-items: center;
+  border-radius: 50%;
+  color: #fffaf3;
+  background: linear-gradient(135deg, #4f3426, #8f4124);
+  font: 700 1.25rem/1 "Bricolage Grotesque", sans-serif;
+  transition: transform 180ms ease;
+}
+
+.classic-brown-apps .apps-back-link:hover,
+.classic-brown-apps .apps-back-link:focus-visible {
+  border-color: rgba(143, 65, 36, 0.56);
+  box-shadow: 0 13px 28px rgba(79, 52, 38, 0.16);
+  transform: translateY(-2px);
+}
+
+.classic-brown-apps .apps-back-link:hover .apps-back-arrow,
+.classic-brown-apps .apps-back-link:focus-visible .apps-back-arrow {
+  transform: translateX(-3px);
+}
+
+.classic-brown-apps .apps-back-link:focus-visible {
+  outline: 3px solid rgba(184, 92, 56, 0.24);
+  outline-offset: 3px;
+}
+
+@media (max-width: 520px) {
+  .classic-brown-apps .apps-back-link {
+    width: 46px;
+    min-height: 46px;
+    margin-bottom: 18px;
+    padding: 6px;
+  }
+
+  .classic-brown-apps .apps-back-arrow {
+    width: 32px;
+    height: 32px;
+  }
+
+  .classic-brown-apps .apps-back-label {
+    position: absolute;
+    width: 1px;
+    height: 1px;
+    overflow: hidden;
+    clip: rect(0, 0, 0, 0);
+    white-space: nowrap;
+  }
+}
+
 @media (max-width: 420px) {
   .site-logo > span:last-child {
     display: none;
