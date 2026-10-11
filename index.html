@@ -3,19 +3,28 @@
 <head>
   <meta charset="UTF-8">
   <meta name="viewport" content="width=device-width, initial-scale=1.0">
-  <meta name="description" content="CG Creations brings learning tools, planners, games, and an AI study assistant together in one friendly place.">
-  <title>CG Creations</title>
+  <meta name="description" content="CG Creations brings learning tools, planners, games, and an AI study assistant together in one imaginative place.">
+  <title>CG Creations | Explore, Practice, Create</title>
   <link rel="stylesheet" href="/styles.css?v=20260802b">
+  <link rel="stylesheet" href="/home-v2.css?v=20261011a">
 </head>
-<body class="modern-home blue-site">
-  <main id="home" class="app home-app">
-    <section class="home-shell">
-      <header class="site-nav">
-        <a class="site-logo" href="/" aria-label="CG Creations home">
-          <span class="site-logo-mark">CG</span>
-          <span>Creations<span class="site-logo-dot">.</span></span>
+<body class="immersive-home">
+  <main id="home">
+    <section class="landing-hero" aria-labelledby="landing-title">
+      <div class="landing-atmosphere" aria-hidden="true">
+        <span class="landing-glow landing-glow-one"></span>
+        <span class="landing-glow landing-glow-two"></span>
+        <span class="landing-orbit landing-orbit-one"></span>
+        <span class="landing-orbit landing-orbit-two"></span>
+        <span class="landing-grid"></span>
+      </div>
+
+      <header class="landing-nav">
+        <a class="landing-brand" href="/" aria-label="CG Creations home">
+          <span class="landing-brand-mark">CG</span>
+          <span>Creations</span>
         </a>
-        <nav class="site-nav-links" aria-label="Main navigation">
+        <nav class="landing-links" aria-label="Main navigation">
           <a class="is-current" href="/">Home</a>
           <a href="/apps">Apps</a>
           <a href="/studycourses">Study</a>
@@ -24,54 +33,128 @@
         </nav>
       </header>
 
-      <section class="home-hero blue-hero" aria-labelledby="home-title">
-        <div class="hero-orb hero-orb-one" aria-hidden="true"></div>
-        <div class="hero-orb hero-orb-two" aria-hidden="true"></div>
-        <div class="home-hero-copy">
-          <p class="eyebrow"><span class="eyebrow-dot"></span> Learn, play, organize</p>
-          <h1 id="home-title">One bright place to <span>keep growing.</span></h1>
-          <p class="home-subtitle">Explore focused study courses, useful school tools, smart games, and a new AI learning assistant built for clear answers.</p>
-          <div class="hero-actions">
-            <a class="hero-primary" href="/apps">Explore all apps <span aria-hidden="true">&rarr;</span></a>
-            <a class="hero-secondary" href="/assistant"><span class="play-mark assistant-mark" aria-hidden="true">AI</span> Ask the assistant</a>
+      <div class="landing-hero-content">
+        <div class="landing-copy">
+          <p class="landing-kicker"><span></span> A digital playground for curious minds</p>
+          <h1 id="landing-title">Explore.<br>Practice.<br><em>Create.</em></h1>
+          <p class="landing-intro">Jump into focused study, useful school tools, strategy games, and an AI learning assistant, all built to help you make progress without the clutter.</p>
+          <div class="landing-actions">
+            <a class="landing-button landing-button-primary" href="/apps">Explore creations <span aria-hidden="true">&rarr;</span></a>
+            <a class="landing-button landing-button-quiet" href="/studycourses"><span class="button-pulse" aria-hidden="true"></span> Start learning</a>
           </div>
-          <p class="hero-note"><span></span> Free to explore. Progress can sync with your account.</p>
+          <div class="landing-proof" aria-label="CG Creations highlights">
+            <div><strong>14+</strong><span>tools and games</span></div>
+            <div><strong>3</strong><span>learning subjects</span></div>
+            <div><strong>1</strong><span>account to sync</span></div>
+          </div>
         </div>
 
-        <div class="hero-showcase" aria-label="Featured creations">
-          <a class="showcase-card showcase-main" href="/studycourses">
-            <span class="showcase-kicker">Featured learning</span>
-            <strong>Study Courses</strong>
-            <span>Fresh reading, writing, and math practice.</span>
-            <span class="showcase-arrow" aria-hidden="true">&nearr;</span>
-          </a>
-          <a class="showcase-card" href="/tictactoe"><span class="mini-icon">XO</span><strong>Play smarter</strong><span>Three AI levels</span></a>
-          <a class="showcase-card" href="/homework"><span class="mini-icon">+</span><strong>Stay organized</strong><span>Homework sync</span></a>
-          <a class="showcase-card showcase-soft" href="/assistant"><span class="mini-icon">AI</span><strong>Ask anything</strong><span>Learning help</span></a>
-        </div>
-      </section>
+        <aside class="launch-card" aria-labelledby="launch-title">
+          <div class="launch-card-topline">
+            <span>Choose your next move</span>
+            <span class="launch-live"><i></i> Live</span>
+          </div>
+          <h2 id="launch-title">Where do you want to begin?</h2>
+          <div class="launch-options">
+            <a href="/studycourses">
+              <span class="launch-icon launch-icon-study">A+</span>
+              <span><strong>Study Courses</strong><small>Reading, writing, and math</small></span>
+              <b aria-hidden="true">&nearr;</b>
+            </a>
+            <a href="/homework">
+              <span class="launch-icon launch-icon-plan">&#10003;</span>
+              <span><strong>Homework Tracker</strong><small>Plan, finish, and archive</small></span>
+              <b aria-hidden="true">&nearr;</b>
+            </a>
+            <a href="/apps">
+              <span class="launch-icon launch-icon-play">&#9654;</span>
+              <span><strong>Games &amp; Tools</strong><small>Practice while you play</small></span>
+              <b aria-hidden="true">&nearr;</b>
+            </a>
+          </div>
+          <button id="landing-signin" class="launch-signin" type="button">Sign in to sync progress</button>
+          <p>Your account keeps supported scores and school tools available across devices.</p>
+        </aside>
+      </div>
 
-      <section id="about" class="home-about" aria-labelledby="about-title">
-        <div><p class="eyebrow">Built for momentum</p><h2 id="about-title">Quick to open. Easy to use.</h2></div>
-        <p>Pick one small goal and begin immediately. Every creation is responsive, focused, and designed to feel comfortable on phones, tablets, and computers.</p>
-        <div class="home-benefits" aria-label="Site benefits"><span>11 creations</span><span>Account sync</span><span>Mobile ready</span></div>
-      </section>
-
-      <section class="home-feature-strip" aria-labelledby="discover-title">
-        <div><p class="eyebrow">Ready when you are</p><h2 id="discover-title">Find your next creation.</h2><p>Browse the full blue app gallery, including three new strategy games.</p></div>
-        <a class="hero-primary" href="/apps">Open the app gallery <span aria-hidden="true">&rarr;</span></a>
-      </section>
-
-      <footer class="site-footer">
-        <a class="site-logo" href="/"><span class="site-logo-mark">CG</span><span>Creations<span class="site-logo-dot">.</span></span></a>
-        <p>Tools, learning, games, and more.</p>
-        <a href="/apps">Browse apps &rarr;</a>
-      </footer>
+      <a class="landing-scroll" href="#paths" aria-label="Scroll to explore more"><span></span> Scroll to explore</a>
     </section>
+
+    <div class="landing-marquee" aria-hidden="true">
+      <div>
+        <span>Learn with purpose</span><i></i><span>Play with strategy</span><i></i><span>Organize your day</span><i></i><span>Create your momentum</span><i></i>
+        <span>Learn with purpose</span><i></i><span>Play with strategy</span><i></i><span>Organize your day</span><i></i><span>Create your momentum</span><i></i>
+      </div>
+    </div>
+
+    <section id="paths" class="landing-section landing-paths" aria-labelledby="paths-title">
+      <div class="section-heading">
+        <p class="landing-kicker"><span></span> Pick a path</p>
+        <h2 id="paths-title">Small steps.<br>Real momentum.</h2>
+        <p>Each space has one clear purpose, so you can spend less time navigating and more time doing.</p>
+      </div>
+      <div class="path-grid">
+        <a class="path-card path-card-study" href="/studycourses">
+          <span class="path-number">01</span>
+          <div class="path-art" aria-hidden="true"><span>A</span><span>B</span><span>C</span></div>
+          <p>Build your skills</p>
+          <h3>Study Courses</h3>
+          <span class="path-link">Start a practice <b>&rarr;</b></span>
+        </a>
+        <a class="path-card path-card-plan" href="/homework">
+          <span class="path-number">02</span>
+          <div class="path-art path-checks" aria-hidden="true"><span>&#10003;</span><span>&#10003;</span><span></span></div>
+          <p>Clear your mind</p>
+          <h3>Homework Tracker</h3>
+          <span class="path-link">Plan your work <b>&rarr;</b></span>
+        </a>
+        <a class="path-card path-card-play" href="/apps">
+          <span class="path-number">03</span>
+          <div class="path-art path-pieces" aria-hidden="true"><span></span><span></span><span></span><span></span></div>
+          <p>Challenge yourself</p>
+          <h3>Games &amp; Tools</h3>
+          <span class="path-link">Browse everything <b>&rarr;</b></span>
+        </a>
+      </div>
+    </section>
+
+    <section class="assistant-spotlight" aria-labelledby="assistant-title">
+      <div class="assistant-visual" aria-hidden="true">
+        <span class="ai-ring ai-ring-one"></span>
+        <span class="ai-ring ai-ring-two"></span>
+        <span class="ai-core">AI</span>
+        <span class="ai-chip ai-chip-one">Explain it simply</span>
+        <span class="ai-chip ai-chip-two">Quiz me</span>
+        <span class="ai-chip ai-chip-three">Show an example</span>
+      </div>
+      <div class="assistant-copy">
+        <p class="landing-kicker"><span></span> Learning assistant</p>
+        <h2 id="assistant-title">Ask. Understand. Keep going.</h2>
+        <p>Get a clearer explanation, build a quick quiz, or find the next step when a problem feels stuck.</p>
+        <a class="landing-button landing-button-light" href="/assistant">Meet the assistant <span aria-hidden="true">&rarr;</span></a>
+      </div>
+    </section>
+
+    <footer class="landing-footer">
+      <a class="landing-brand" href="/"><span class="landing-brand-mark">CG</span><span>Creations</span></a>
+      <p>Tools, learning, games, and more.</p>
+      <nav aria-label="Footer navigation">
+        <a href="/apps">Apps</a>
+        <a href="/info/about">About</a>
+        <a href="/info/privacy">Privacy</a>
+        <a href="/info/contact">Contact</a>
+      </nav>
+    </footer>
   </main>
+
   <script src="/trust.js?v=20261011c"></script>
   <script src="/analytics.js?v=20261004a"></script>
   <script src="/auth-ui.js?v=20260720a"></script>
-  <script>window.siteAnalytics.init();</script>
+  <script>
+    document.getElementById("landing-signin").addEventListener("click", function () {
+      if (window.siteAuth) window.siteAuth.openSignIn();
+    });
+    window.siteAnalytics.init();
+  </script>
 </body>
 </html>
