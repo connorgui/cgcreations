@@ -52,7 +52,7 @@
     if (document.querySelector('link[href^="/trust.css"]')) return;
     const link = document.createElement("link");
     link.rel = "stylesheet";
-    link.href = "/trust.css?v=20261011b";
+    link.href = "/trust.css?v=20261011c";
     document.head.appendChild(link);
   }
 
@@ -67,12 +67,12 @@
           <p>Transparent tools for learning, organizing, and playing.</p>
         </div>
         <nav aria-label="Trust and legal information">
-          <a href="/trust">Trust Center</a>
-          <a href="/about">About</a>
-          <a href="/privacy">Privacy</a>
-          <a href="/cookies">Cookies</a>
-          <a href="/terms">Terms</a>
-          <a href="/contact">Contact &amp; Safety</a>
+          <a href="/info/trust">Trust Center</a>
+          <a href="/info/about">About</a>
+          <a href="/info/privacy">Privacy</a>
+          <a href="/info/cookies">Cookies</a>
+          <a href="/info/terms">Terms</a>
+          <a href="/info/contact">Contact &amp; Safety</a>
           <button type="button" data-terms-settings>Terms choice</button>
           <button type="button" data-cookie-settings>Cookie settings</button>
         </nav>
@@ -90,7 +90,7 @@
           <p class="cookie-kicker">Your privacy, your choice</p>
           <h2 id="cookie-banner-title">Choose how visitor analytics work</h2>
           <p>CG Creations uses essential browser storage for sign-in and preferences. Optional visitor analytics records your IP address and country to count unique visitors only when you allow it.</p>
-          <a href="/cookies">Read the Cookie Policy</a>
+          <a href="/info/cookies">Read the Cookie Policy</a>
         </div>
         <div class="cookie-actions">
           <button type="button" class="cookie-secondary" data-consent="essential">Essential only</button>
@@ -171,7 +171,7 @@
           <p class="cookie-kicker">First-visit notice</p>
           <h2 id="terms-dialog-title">Terms &amp; Conditions</h2>
           <p id="terms-dialog-description">You can keep using the website while this notice is open. Please use CG Creations responsibly and check important learning or AI answers with a trusted source.</p>
-          <p class="terms-read-more">Read the <a href="/terms">Terms of Use</a> and <a href="/privacy">Privacy Notice</a>.</p>
+          <p class="terms-read-more">Read the <a href="/info/terms">Terms of Use</a> and <a href="/info/privacy">Privacy Notice</a>.</p>
           <div class="terms-actions">
             <button class="terms-disagree" type="button" data-terms-choice="declined">Disagree</button>
             <button class="terms-agree" type="button" data-terms-choice="accepted">Agree</button>

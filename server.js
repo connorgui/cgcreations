@@ -35,12 +35,14 @@ const cleanPageRoutes = new Map([
   ['/connectfour', 'connect-four.html'],
   ['/chess', 'chess.html'],
   ['/assistant', 'assistant.html'],
-  ['/trust', 'trust.html'],
-  ['/about', 'about.html'],
-  ['/privacy', 'privacy.html'],
-  ['/cookies', 'cookies.html'],
-  ['/terms', 'terms.html'],
-  ['/contact', 'contact.html']
+  ['/info', 'about.html'],
+  ['/info/', 'about.html'],
+  ['/info/about', 'about.html'],
+  ['/info/trust', 'trust.html'],
+  ['/info/privacy', 'privacy.html'],
+  ['/info/cookies', 'cookies.html'],
+  ['/info/terms', 'terms.html'],
+  ['/info/contact', 'contact.html']
 ]);
 
 const legacyPageRedirects = new Map([
@@ -55,9 +57,12 @@ const legacyPageRedirects = new Map([
   ['/tic-tac-toe.html', '/tictactoe'], ['/tic-tac-toe', '/tictactoe'],
   ['/connect-four.html', '/connectfour'], ['/connect-four', '/connectfour'],
   ['/chess.html', '/chess'], ['/assistant.html', '/assistant'],
-  ['/trust.html', '/trust'], ['/about.html', '/about'],
-  ['/privacy.html', '/privacy'], ['/cookies.html', '/cookies'],
-  ['/terms.html', '/terms'], ['/contact.html', '/contact']
+  ['/trust.html', '/info/trust'], ['/trust', '/info/trust'],
+  ['/about.html', '/info/about'], ['/about', '/info/about'],
+  ['/privacy.html', '/info/privacy'], ['/privacy', '/info/privacy'],
+  ['/cookies.html', '/info/cookies'], ['/cookies', '/info/cookies'],
+  ['/terms.html', '/info/terms'], ['/terms', '/info/terms'],
+  ['/contact.html', '/info/contact'], ['/contact', '/info/contact']
 ]);
 
 function normalizeAnalyticsData(raw) {
