@@ -133,7 +133,7 @@
       const preferences = loadPreferences();
       analyticsInput.checked = Boolean(preferences && preferences.analytics);
       modal.hidden = false;
-      shell.querySelector(".cookie-modal-close").focus();
+      shell.querySelector(".cookie-modal-close").focus({ preventScroll: true });
     }
 
     function choose(analytics) {
@@ -186,7 +186,7 @@
 
     function openModal() {
       modal.hidden = false;
-      closeButton.focus();
+      closeButton.focus({ preventScroll: true });
     }
 
     function finish(choice) {
